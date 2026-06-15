@@ -59,10 +59,11 @@ onMounted(() => {
 
 .star {
   position: absolute;
-  background: #f0f0ff;
+  background: var(--star-color);
   border-radius: 50%;
   animation: twinkle ease-in-out infinite;
-  box-shadow: 0 0 6px #f0f0ff, 0 0 12px rgba(240, 240, 255, 0.5);
+  box-shadow: 0 0 6px var(--star-color), 0 0 12px var(--shadow-color);
+  transition: background 0.3s ease, box-shadow 0.3s ease;
 }
 
 @keyframes twinkle {

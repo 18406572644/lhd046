@@ -92,6 +92,16 @@ const routes: RouteRecordRaw[] = [
       preload: false,
       priority: 'low'
     }
+  },
+  {
+    path: '/theme',
+    name: 'Theme',
+    component: () => import('@/views/ThemeView.vue'),
+    meta: {
+      keepAlive: true,
+      preload: true,
+      priority: 'medium'
+    }
   }
 ]
 

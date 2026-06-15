@@ -46,7 +46,8 @@ import {
   NotificationsOutline,
   StarOutline,
   BookmarkOutline,
-  BarChartOutline
+  BarChartOutline,
+  ColorPaletteOutline
 } from '@vicons/ionicons5'
 
 const route = useRoute()
@@ -65,6 +66,7 @@ const desktopMenu: MenuItem[] = [
   { name: '性格分析', path: '/personality', icon: PersonOutline },
   { name: '幸运物', path: '/lucky', icon: GiftOutline },
   { name: '星座知识', path: '/knowledge', icon: BookOutline },
+  { name: '主题皮肤', path: '/theme', icon: ColorPaletteOutline },
   { name: '提醒设置', path: '/reminder', icon: NotificationsOutline },
   { name: '我的收藏', path: '/favorites', icon: BookmarkOutline }
 ]
@@ -85,10 +87,11 @@ const mobileMenu: MenuItem[] = [
   left: 0;
   right: 0;
   z-index: 100;
-  background: rgba(26, 26, 62, 0.7);
+  background: var(--glass-bg);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid var(--glass-border);
+  transition: background 0.3s ease, border-color 0.3s ease;
 }
 
 .nav-container {
@@ -105,7 +108,7 @@ const mobileMenu: MenuItem[] = [
   display: flex;
   align-items: center;
   gap: 10px;
-  background: linear-gradient(135deg, #00d4ff, #a855f7);
+  background: linear-gradient(135deg, var(--accent), var(--primary));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -113,9 +116,9 @@ const mobileMenu: MenuItem[] = [
 
 .logo-icon {
   font-size: 28px;
-  color: #ffd700;
-  -webkit-text-fill-color: #ffd700;
-  filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.6));
+  color: var(--accent-secondary);
+  -webkit-text-fill-color: var(--accent-secondary);
+  filter: drop-shadow(0 0 8px var(--shadow-color));
 }
 
 .logo-text {
@@ -136,7 +139,7 @@ const mobileMenu: MenuItem[] = [
   gap: 6px;
   padding: 10px 16px;
   border-radius: 12px;
-  color: #c9b6e4;
+  color: var(--text-secondary);
   text-decoration: none;
   font-size: 14px;
   font-weight: 500;
@@ -145,14 +148,14 @@ const mobileMenu: MenuItem[] = [
 }
 
 .nav-link:hover {
-  color: #f0f0ff;
-  background: rgba(168, 85, 247, 0.15);
+  color: var(--text-primary);
+  background: var(--primary-light);
 }
 
 .nav-link.active {
-  color: #f0f0ff;
-  background: linear-gradient(135deg, rgba(0, 212, 255, 0.2), rgba(168, 85, 247, 0.2));
-  box-shadow: 0 0 20px rgba(168, 85, 247, 0.2);
+  color: var(--text-primary);
+  background: linear-gradient(135deg, var(--primary-light), var(--primary-light));
+  box-shadow: 0 0 20px var(--shadow-color);
 }
 
 .nav-link.active::before {
@@ -164,8 +167,8 @@ const mobileMenu: MenuItem[] = [
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #00d4ff, #a855f7);
-  box-shadow: 0 0 10px rgba(168, 85, 247, 0.8);
+  background: linear-gradient(135deg, var(--accent), var(--primary));
+  box-shadow: 0 0 10px var(--shadow-color-strong);
 }
 
 .nav-icon {
@@ -183,13 +186,14 @@ const mobileMenu: MenuItem[] = [
   right: 0;
   z-index: 100;
   height: 70px;
-  background: rgba(26, 26, 62, 0.85);
+  background: var(--glass-bg);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid var(--glass-border);
   align-items: center;
   justify-content: space-around;
   padding: 0 8px;
+  transition: background 0.3s ease, border-color 0.3s ease;
 }
 
 .mobile-nav-item {
@@ -200,23 +204,23 @@ const mobileMenu: MenuItem[] = [
   gap: 4px;
   flex: 1;
   height: 100%;
-  color: #c9b6e4;
+  color: var(--text-secondary);
   text-decoration: none;
   transition: all 0.3s ease;
   position: relative;
 }
 
 .mobile-nav-item:hover {
-  color: #f0f0ff;
+  color: var(--text-primary);
 }
 
 .mobile-nav-item.active {
-  color: #f0f0ff;
+  color: var(--text-primary);
 }
 
 .mobile-nav-item.active .mobile-nav-icon {
   transform: translateY(-2px);
-  filter: drop-shadow(0 0 8px rgba(168, 85, 247, 0.6));
+  filter: drop-shadow(0 0 8px var(--shadow-color));
 }
 
 .mobile-nav-item.active::before {
@@ -228,8 +232,8 @@ const mobileMenu: MenuItem[] = [
   width: 30px;
   height: 3px;
   border-radius: 0 0 3px 3px;
-  background: linear-gradient(135deg, #00d4ff, #a855f7);
-  box-shadow: 0 0 10px rgba(168, 85, 247, 0.6);
+  background: linear-gradient(135deg, var(--accent), var(--primary));
+  box-shadow: 0 0 10px var(--shadow-color);
 }
 
 .mobile-nav-icon {

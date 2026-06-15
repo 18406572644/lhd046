@@ -1,7 +1,7 @@
 <template>
   <div class="app-container">
     <StarSky />
-    <NConfigProvider :theme="darkTheme" :locale="zhCN" :date-locale="dateZhCN">
+    <NConfigProvider :theme="naiveTheme" :theme-overrides="naiveTheme" :locale="zhCN" :date-locale="dateZhCN">
       <NMessageProvider>
         <NDialogProvider>
           <NLoadingBarProvider>
@@ -25,12 +25,15 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, watch } from 'vue'
 import { NConfigProvider, NMessageProvider, NDialogProvider, NLoadingBarProvider, darkTheme, zhCN, dateZhCN } from 'naive-ui'
 import StarSky from '@/components/StarSky.vue'
 import MainNav from '@/components/MainNav.vue'
 import { initPerformanceMonitoring, getPerformanceScore } from '@/utils/performance'
 import { routes } from '@/router'
+import { useThemeStore } from '@/stores/themeStore'
+
+const themeStore = useThemeStore()
 
 const cachedViews = computed(() => {
   return routes
@@ -38,7 +41,213 @@ const cachedViews = computed(() => {
     .map(route => route.name as string)
 })
 
+const naiveTheme = computed(() => {
+  const theme = themeStore.currentTheme
+  const colors = theme.colors
+
+  const themeOverrides = {
+    common: {
+      primaryColor: colors.primary,
+      primaryColorHover: colors.primaryHover,
+      primaryColorPressed: colors.primaryActive,
+      primaryColorSuppl: colors.primaryLight,
+      infoColor: colors.info,
+      successColor: colors.success,
+      warningColor: colors.warning,
+      errorColor: colors.error,
+      textColor1: colors.textPrimary,
+      textColor2: colors.textSecondary,
+      textColor3: colors.textTertiary,
+      placeholderColor: colors.textPlaceholder,
+      borderColor: colors.border,
+      borderColorHover: colors.borderHover,
+      bodyColor: colors.glassBg,
+      cardColor: colors.glassBg,
+      modalColor: colors.bgSecondary,
+      popoverColor: colors.bgSecondary,
+      dividerColor: colors.border,
+      scrollbarColor: colors.primary,
+      scrollbarColorHover: colors.primaryHover,
+      inputColor: colors.surface,
+      inputColorDisabled: colors.surface,
+      tagColor: colors.surface,
+      tabColor: 'transparent',
+      sliderRailColor: colors.border,
+      sliderRailColorHover: colors.borderHover,
+      progressRailColor: colors.border
+    },
+    Card: {
+      color: colors.glassBg,
+      colorHover: colors.glassBg,
+      borderColor: colors.glassBorder,
+      borderColorHover: colors.glassBorderHover,
+      textColor: colors.textPrimary,
+      titleTextColor: colors.textPrimary,
+      headerBorderColor: colors.glassBorder,
+      footerBorderColor: colors.glassBorder
+    },
+    Button: {
+      color: colors.surface,
+      colorHover: colors.surfaceHover,
+      colorPressed: colors.surfaceActive,
+      textColor: colors.textPrimary,
+      textColorHover: colors.textPrimary,
+      textColorPressed: colors.textPrimary,
+      borderColor: colors.border,
+      borderColorHover: colors.borderHover,
+      borderColorPressed: colors.border
+    },
+    Input: {
+      color: colors.surface,
+      colorHover: colors.surfaceHover,
+      colorFocus: colors.surface,
+      colorDisabled: colors.surface,
+      textColor: colors.textPrimary,
+      textColorDisabled: colors.textPlaceholder,
+      placeholderColor: colors.textPlaceholder,
+      borderColor: colors.glassBorder,
+      borderColorHover: colors.glassBorderHover,
+      borderColorFocus: colors.primary
+    },
+    Select: {
+      color: colors.surface,
+      colorHover: colors.surfaceHover,
+      colorActive: colors.primaryLight,
+      textColor: colors.textPrimary,
+      placeholderColor: colors.textPlaceholder,
+      borderColor: colors.glassBorder,
+      borderColorHover: colors.glassBorderHover,
+      borderColorActive: colors.primary,
+      optionColor: colors.bgSecondary,
+      optionTextColor: colors.textPrimary,
+      optionColorHover: colors.primaryLight,
+      optionTextColorHover: colors.textPrimary,
+      optionColorActive: colors.primaryLight,
+      optionTextColorActive: colors.primary
+    },
+    Modal: {
+      color: colors.bgSecondary,
+      textColor: colors.textPrimary,
+      titleTextColor: colors.textPrimary,
+      borderColor: colors.glassBorder,
+      boxShadow: `0 8px 32px ${colors.shadowColor}`
+    },
+    Dialog: {
+      color: colors.bgSecondary,
+      textColor: colors.textPrimary,
+      titleTextColor: colors.textPrimary,
+      contentTextColor: colors.textSecondary,
+      borderColor: colors.glassBorder
+    },
+    Message: {
+      color: colors.bgSecondary,
+      textColor: colors.textPrimary
+    },
+    Tabs: {
+      tabTextColor: colors.textSecondary,
+      tabTextColorActive: colors.textPrimary,
+      tabTextColorHover: colors.textPrimary,
+      tabColor: 'transparent',
+      tabColorActive: 'transparent',
+      tabColorHover: 'transparent',
+      barColor: colors.primary,
+      railColor: colors.border
+    },
+    Switch: {
+      railColor: colors.textPlaceholder,
+      railColorActive: colors.primary,
+      buttonColor: '#ffffff'
+    },
+    Tag: {
+      color: colors.surface,
+      colorHover: colors.surfaceHover,
+      textColor: colors.textPrimary,
+      borderColor: colors.border
+    },
+    Progress: {
+      color: colors.primary,
+      railColor: colors.border,
+      textColor: colors.textPrimary
+    },
+    Empty: {
+      textColor: colors.textSecondary,
+      descriptionTextColor: colors.textTertiary
+    },
+    Form: {
+      labelTextColor: colors.textSecondary,
+      labelTextColorHover: colors.textSecondary,
+      asteriskColor: colors.error,
+      feedbackTextColorError: colors.error,
+      feedbackTextColorWarning: colors.warning,
+      feedbackTextColorSuccess: colors.success
+    },
+    Collapse: {
+      color: colors.glassBg,
+      textColor: colors.textPrimary,
+      arrowColor: colors.textSecondary,
+      dividerColor: colors.border,
+      titleTextColor: colors.textPrimary,
+      contentTextColor: colors.textSecondary
+    },
+    List: {
+      color: 'transparent',
+      textColor: colors.textPrimary,
+      borderColor: colors.border,
+      titleTextColor: colors.textPrimary,
+      descriptionTextColor: colors.textSecondary
+    },
+    Spin: {
+      color: colors.primary
+    },
+    DatePicker: {
+      color: colors.surface,
+      colorHover: colors.surfaceHover,
+      textColor: colors.textPrimary,
+      placeholderColor: colors.textPlaceholder,
+      borderColor: colors.glassBorder,
+      borderColorHover: colors.glassBorderHover,
+      panelColor: colors.bgSecondary,
+      calendarDateColor: colors.textPrimary,
+      calendarDateColorHover: colors.primary,
+      calendarDateColorActive: colors.primary,
+      calendarDateColorDisabled: colors.textPlaceholder
+    },
+    Grid: {
+      textColor: colors.textPrimary
+    },
+    Thing: {
+      titleTextColor: colors.textPrimary,
+      mainTextColor: colors.textPrimary,
+      descriptionTextColor: colors.textSecondary
+    },
+    Radio: {
+      labelTextColor: colors.textPrimary,
+      labelTextColorDisabled: colors.textPlaceholder,
+      dotColor: colors.primary,
+      dotColorActive: colors.primary,
+      borderColor: colors.border,
+      borderColorActive: colors.primary,
+      borderColorHover: colors.primaryHover
+    },
+    Popconfirm: {
+      color: colors.bgSecondary,
+      textColor: colors.textPrimary,
+      borderColor: colors.glassBorder
+    }
+  }
+
+  return {
+    ...darkTheme,
+    ...themeOverrides,
+    common: {
+      ...darkTheme.common,
+      ...themeOverrides.common
+    }
+  }
+})
+
 onMounted(() => {
+  themeStore.initTheme()
   initPerformanceMonitoring()
   
   const loader = document.getElementById('skeletonLoader')
