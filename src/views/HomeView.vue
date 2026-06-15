@@ -32,9 +32,11 @@
     </div>
 
     <div v-if="loading || allFortuneLoading" class="home-view-loading-container">
-      <NSpin size="large">
-        <div class="home-view-loading-placeholder"></div>
-      </NSpin>
+      <div class="home-view-skeleton-sections">
+        <Skeleton type="card" style="margin-bottom: 24px;" />
+        <Skeleton type="grid" :cols="3" :count="3" style="margin-bottom: 24px;" />
+        <Skeleton type="grid" :cols="3" :count="6" style="margin-bottom: 24px;" />
+      </div>
     </div>
 
     <template v-else>
@@ -216,48 +218,94 @@
               </div>
             </NCard>
           </div>
-          <NGrid
-            :cols="1"
-            :medium-cols="2"
-            :large-cols="3"
-            :x-gap="16"
-            :y-gap="16"
-            class="home-view-zodiac-grid"
-          >
-            <NGi v-for="sign in displayZodiacSigns" :key="sign.id">
-              <NCard
-                class="home-view-glass-card home-view-zodiac-card"
-                :class="{ 'home-view-high-interest': hasInterest(sign.id) && userStore.layoutConfig.zodiacSortMode === 'interest' }"
-                hoverable
-                @click="goToFortune(sign.id)"
-              >
-                <div class="home-view-zodiac-card-content">
-                  <div class="home-view-zodiac-card-symbol">{{ sign.symbol }}</div>
-                  <div class="home-view-zodiac-card-info">
-                    <div class="home-view-zodiac-card-name">
-                      {{ sign.name }}
-                      <SparklesOutline
-                        v-if="hasInterest(sign.id) && userStore.layoutConfig.zodiacSortMode === 'interest'"
-                        class="home-view-interest-icon"
-                        style="color: #ffd700; margin-left: 4px"
-                      />
+          
+          <div class="home-view-zodiac-grid-desktop">
+            <NGrid
+              :cols="1"
+              :medium-cols="2"
+              :large-cols="3"
+              :x-gap="16"
+              :y-gap="16"
+            >
+              <NGi v-for="sign in displayZodiacSigns" :key="sign.id">
+                <NCard
+                  class="home-view-glass-card home-view-zodiac-card"
+                  :class="{ 'home-view-high-interest': hasInterest(sign.id) && userStore.layoutConfig.zodiacSortMode === 'interest' }"
+                  hoverable
+                  @click="goToFortune(sign.id)"
+                >
+                  <div class="home-view-zodiac-card-content">
+                    <div class="home-view-zodiac-card-symbol">{{ sign.symbol }}</div>
+                    <div class="home-view-zodiac-card-info">
+                      <div class="home-view-zodiac-card-name">
+                        {{ sign.name }}
+                        <SparklesOutline
+                          v-if="hasInterest(sign.id) && userStore.layoutConfig.zodiacSortMode === 'interest'"
+                          class="home-view-interest-icon"
+                          style="color: #ffd700; margin-left: 4px"
+                        />
+                      </div>
+                      <div class="home-view-zodiac-card-date">{{ sign.dateRange }}</div>
                     </div>
-                    <div class="home-view-zodiac-card-date">{{ sign.dateRange }}</div>
+                    <div class="home-view-zodiac-card-score">
+                      <NTag
+                        :type="getScoreType(getSignScore(sign.id))"
+                        :bordered="false"
+                        size="medium"
+                        round
+                      >
+                        {{ getSignScore(sign.id) }}分
+                      </NTag>
+                    </div>
                   </div>
-                  <div class="home-view-zodiac-card-score">
-                    <NTag
-                      :type="getScoreType(getSignScore(sign.id))"
-                      :bordered="false"
-                      size="medium"
-                      round
-                    >
-                      {{ getSignScore(sign.id) }}分
-                    </NTag>
+                </NCard>
+              </NGi>
+            </NGrid>
+          </div>
+          
+          <div class="home-view-zodiac-list-mobile">
+            <VirtualList
+              :data="displayZodiacSigns"
+              :item-height="92"
+              container-height="500px"
+              :get-key="(item) => item.id"
+            >
+              <template #default="{ item: sign }">
+                <NCard
+                  class="home-view-glass-card home-view-zodiac-card"
+                  :class="{ 'home-view-high-interest': hasInterest(sign.id) && userStore.layoutConfig.zodiacSortMode === 'interest' }"
+                  hoverable
+                  @click="goToFortune(sign.id)"
+                  style="margin-bottom: 12px;"
+                >
+                  <div class="home-view-zodiac-card-content">
+                    <div class="home-view-zodiac-card-symbol">{{ sign.symbol }}</div>
+                    <div class="home-view-zodiac-card-info">
+                      <div class="home-view-zodiac-card-name">
+                        {{ sign.name }}
+                        <SparklesOutline
+                          v-if="hasInterest(sign.id) && userStore.layoutConfig.zodiacSortMode === 'interest'"
+                          class="home-view-interest-icon"
+                          style="color: #ffd700; margin-left: 4px"
+                        />
+                      </div>
+                      <div class="home-view-zodiac-card-date">{{ sign.dateRange }}</div>
+                    </div>
+                    <div class="home-view-zodiac-card-score">
+                      <NTag
+                        :type="getScoreType(getSignScore(sign.id))"
+                        :bordered="false"
+                        size="medium"
+                        round
+                      >
+                        {{ getSignScore(sign.id) }}分
+                      </NTag>
+                    </div>
                   </div>
-                </div>
-              </NCard>
-            </NGi>
-          </NGrid>
+                </NCard>
+              </template>
+            </VirtualList>
+          </div>
         </template>
 
       </template>
@@ -335,7 +383,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, onActivated } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   NCard,
@@ -373,6 +421,9 @@ import {
 import { getDailyFortune } from '@/data/mockApi'
 import { zodiacSigns, getSignById } from '@/data/zodiacSigns'
 import { useUserStore } from '@/stores/userStore'
+import Skeleton from '@/components/Skeleton.vue'
+import VirtualList from '@/components/VirtualList.vue'
+import { measureFunction, requestIdleCallback } from '@/utils/performance'
 import type { 
   DailyFortune, 
   ZodiacSign, 
@@ -475,11 +526,33 @@ const formatViewTime = (dateStr: string) => {
   return format(date, 'MM-dd HH:mm')
 }
 
+const prefetchNextPages = () => {
+  requestIdleCallback(() => {
+    const topSigns = userStore.sortedZodiacSigns.slice(0, 3)
+    const today = new Date()
+    
+    topSigns.forEach((sign, index) => {
+      setTimeout(() => {
+        getDailyFortune(sign.id, today).then((fortune) => {
+          if (!allFortunes.value[sign.id]) {
+            allFortunes.value[sign.id] = fortune
+          }
+        }).catch(() => {})
+      }, index * 500)
+    })
+  }, 3000)
+}
+
 const loadDefaultFortune = async () => {
   loading.value = true
   try {
-    const today = new Date()
-    defaultFortune.value = await getDailyFortune(defaultSignId.value, today)
+    const { result, duration } = await measureFunction(async () => {
+      const today = new Date()
+      return await getDailyFortune(defaultSignId.value, today)
+    }, 'loadDefaultFortune')
+    
+    defaultFortune.value = result
+    console.log(`⏱️ Loaded default fortune in: ${duration.toFixed(0)}ms`)
   } catch (error) {
     message.error('加载运势数据失败')
   } finally {
@@ -490,21 +563,27 @@ const loadDefaultFortune = async () => {
 const loadAllFortunes = async () => {
   allFortuneLoading.value = true
   try {
-    const today = new Date()
-    const promises = zodiacSigns.map((sign) =>
-      getDailyFortune(sign.id, today).then((fortune) => ({
-        signId: sign.id,
-        fortune
-      }))
-    )
-    const results = await Promise.all(promises)
-    results.forEach(({ signId, fortune }) => {
+    const { result, duration } = await measureFunction(async () => {
+      const today = new Date()
+      const promises = zodiacSigns.map((sign) =>
+        getDailyFortune(sign.id, today).then((fortune) => ({
+          signId: sign.id,
+          fortune
+        }))
+      )
+      return await Promise.all(promises)
+    }, 'loadAllFortunes')
+    
+    result.forEach(({ signId, fortune }) => {
       allFortunes.value[signId] = fortune
     })
+    
+    console.log(`⏱️ Loaded all fortunes in: ${duration.toFixed(0)}ms`)
   } catch (error) {
     message.error('加载星座运势失败')
   } finally {
     allFortuneLoading.value = false
+    prefetchNextPages()
   }
 }
 
@@ -633,10 +712,23 @@ watch(showLayoutManager, (newVal) => {
   }
 })
 
+const isFirstLoad = ref(true)
+
 onMounted(() => {
   loadDefaultFortune()
   loadAllFortunes()
   userStore.recordPageView('fortune', 'home')
+  isFirstLoad.value = false
+})
+
+onActivated(() => {
+  if (!isFirstLoad.value) {
+    userStore.recordPageView('fortune', 'home')
+  }
+})
+
+defineOptions({
+  name: 'Home'
 })
 </script>
 
@@ -737,15 +829,19 @@ onMounted(() => {
 }
 
 .home-view-loading-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
   min-height: 300px;
 }
 
-.home-view-loading-placeholder {
-  width: 200px;
-  height: 200px;
+.home-view-skeleton-sections {
+  padding: 0 8px;
+}
+
+.home-view-zodiac-grid-desktop {
+  display: block;
+}
+
+.home-view-zodiac-list-mobile {
+  display: none;
 }
 
 .home-view-glass-card {
@@ -1238,9 +1334,25 @@ onMounted(() => {
   .home-view-zodiac-grid {
     grid-template-columns: repeat(3, 1fr);
   }
+  
+  .home-view-zodiac-grid-desktop {
+    display: block;
+  }
+  
+  .home-view-zodiac-list-mobile {
+    display: none;
+  }
 }
 
 @media (max-width: 767px) {
+  .home-view-zodiac-grid-desktop {
+    display: none;
+  }
+  
+  .home-view-zodiac-list-mobile {
+    display: block;
+  }
+  
   .home-view-header-top {
     flex-direction: column;
     gap: 8px;

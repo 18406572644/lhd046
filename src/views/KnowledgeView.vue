@@ -33,11 +33,9 @@
         </NTabs>
       </NCard>
 
-      <NSpin v-if="loading" size="large" show>
-        <div class="loading-container">
-          <div class="loading-text">正在加载星座知识...</div>
-        </div>
-      </NSpin>
+      <div v-if="loading" class="knowledge-skeleton">
+        <Skeleton type="list" :count="6" />
+      </div>
 
       <template v-else>
         <div v-if="filteredKnowledge.length === 0" class="empty-state">
@@ -46,69 +44,71 @@
           <p class="empty-hint">试试其他关键词或分类</p>
         </div>
 
-        <NCollapse v-else :default-expanded-names="[]" accordion>
-          <NCollapseItem 
-            v-for="item in filteredKnowledge" 
-            :key="item.id" 
-            :name="item.id"
-          >
-            <template #header>
-              <div class="collapse-header">
-                <div class="header-left">
-                  <span class="knowledge-icon">{{ getCategoryIcon(item.category) }}</span>
-                  <div class="header-info">
-                    <h3 class="knowledge-title">{{ item.title }}</h3>
-                    <div class="header-meta">
-                      <NTag size="small" :type="getCategoryTagType(item.category)">
-                        {{ getCategoryName(item.category) }}
-                      </NTag>
-                      <span class="read-time">约 {{ Math.ceil(item.content.length / 200) }} 分钟阅读</span>
+        <VirtualList
+          v-else
+          :data="filteredKnowledge"
+          :item-height="120"
+          container-height="600px"
+          :get-key="(item) => item.id"
+        >
+          <template #default="{ item }">
+            <NCollapse :default-expanded-names="[]" accordion style="margin-bottom: 12px;">
+              <NCollapseItem :name="item.id">
+                <template #header>
+                  <div class="collapse-header">
+                    <div class="header-left">
+                      <span class="knowledge-icon">{{ getCategoryIcon(item.category) }}</span>
+                      <div class="header-info">
+                        <h3 class="knowledge-title">{{ item.title }}</h3>
+                        <div class="header-meta">
+                          <NTag size="small" :type="getCategoryTagType(item.category)">
+                            {{ getCategoryName(item.category) }}
+                          </NTag>
+                          <span class="read-time">约 {{ Math.ceil(item.content.length / 200) }} 分钟阅读</span>
+                        </div>
+                      </div>
+                    </div>
+                    <NButton 
+                      text 
+                      size="small"
+                      :class="['favorite-btn', { favorited: isItemFavorited(item.id) }]"
+                      @click.stop="toggleItemFavorite(item.id)"
+                    >
+                      <template #icon>
+                        <NIcon :component="isItemFavorited(item.id) ? Bookmark : BookmarkOutline" :size="18" />
+                      </template>
+                    </NButton>
+                  </div>
+                </template>
+                <div class="knowledge-content">
+                  <div class="content-full">
+                    <p class="content-text">{{ item.content }}</p>
+                    <div class="content-footer">
+                      <div class="content-actions">
+                        <NButton size="small" @click="shareKnowledge(item)">
+                          <template #icon>
+                            <NIcon :component="ShareOutline" />
+                          </template>
+                          分享
+                        </NButton>
+                        <NButton 
+                          size="small"
+                          :type="isItemFavorited(item.id) ? 'warning' : 'default'"
+                          @click="toggleItemFavorite(item.id)"
+                        >
+                          <template #icon>
+                            <NIcon :component="isItemFavorited(item.id) ? Bookmark : BookmarkOutline" />
+                          </template>
+                          {{ isItemFavorited(item.id) ? '已收藏' : '收藏' }}
+                        </NButton>
+                      </div>
                     </div>
                   </div>
                 </div>
-                <NButton 
-                  text 
-                  size="small"
-                  :class="['favorite-btn', { favorited: isItemFavorited(item.id) }]"
-                  @click.stop="toggleItemFavorite(item.id)"
-                >
-                  <template #icon>
-                    <NIcon :component="isItemFavorited(item.id) ? Bookmark : BookmarkOutline" :size="18" />
-                  </template>
-                </NButton>
-              </div>
-            </template>
-            <div class="knowledge-content">
-              <div class="content-preview" v-if="!isExpanded(item.id)">
-                {{ item.content.substring(0, 100) }}...
-                <span class="expand-hint">点击展开查看完整内容</span>
-              </div>
-              <div v-else class="content-full">
-                <p class="content-text">{{ item.content }}</p>
-                <div class="content-footer">
-                  <div class="content-actions">
-                    <NButton size="small" @click="shareKnowledge(item)">
-                      <template #icon>
-                        <NIcon :component="ShareOutline" />
-                      </template>
-                      分享
-                    </NButton>
-                    <NButton 
-                      size="small"
-                      :type="isItemFavorited(item.id) ? 'warning' : 'default'"
-                      @click="toggleItemFavorite(item.id)"
-                    >
-                      <template #icon>
-                        <NIcon :component="isItemFavorited(item.id) ? Bookmark : BookmarkOutline" />
-                      </template>
-                      {{ isItemFavorited(item.id) ? '已收藏' : '收藏' }}
-                    </NButton>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </NCollapseItem>
-        </NCollapse>
+              </NCollapseItem>
+            </NCollapse>
+          </template>
+        </VirtualList>
 
         <div v-if="filteredKnowledge.length > 0" class="stats-section">
           <NCard class="glass-card stats-card" bordered="false">
@@ -143,7 +143,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onActivated } from 'vue'
 import { useMessage } from 'naive-ui'
 import { 
   NCard, NTag, NIcon, NButton, NSpin, NTabs, NTabPane, 
@@ -157,6 +157,9 @@ import {
 } from '@vicons/ionicons5'
 import { useUserStore } from '@/stores/userStore'
 import { getZodiacKnowledge } from '@/data/mockApi'
+import Skeleton from '@/components/Skeleton.vue'
+import VirtualList from '@/components/VirtualList.vue'
+import { measureFunction, debounce } from '@/utils/performance'
 import type { ZodiacKnowledge } from '@/types'
 
 const message = useMessage()
@@ -164,9 +167,19 @@ const userStore = useUserStore()
 
 const loading = ref(true)
 const searchQuery = ref('')
+const debouncedSearchQuery = ref('')
 const activeCategory = ref('all')
 const allKnowledge = ref<ZodiacKnowledge[]>([])
 const expandedItems = ref<string[]>([])
+const isFirstLoad = ref(true)
+
+const debouncedSearch = debounce((value: string) => {
+  debouncedSearchQuery.value = value
+}, 300)
+
+watch(searchQuery, (newVal) => {
+  debouncedSearch(newVal)
+})
 
 const filteredKnowledge = computed(() => {
   let result = [...allKnowledge.value]
@@ -175,8 +188,8 @@ const filteredKnowledge = computed(() => {
     result = result.filter(item => item.category === activeCategory.value)
   }
   
-  if (searchQuery.value.trim()) {
-    const query = searchQuery.value.toLowerCase().trim()
+  if (debouncedSearchQuery.value.trim()) {
+    const query = debouncedSearchQuery.value.toLowerCase().trim()
     result = result.filter(item => 
       item.title.toLowerCase().includes(query) || 
       item.content.toLowerCase().includes(query)
@@ -271,7 +284,12 @@ const shareKnowledge = (item: ZodiacKnowledge) => {
 const loadData = async () => {
   loading.value = true
   try {
-    allKnowledge.value = await getZodiacKnowledge()
+    const { result, duration } = await measureFunction(async () => {
+      return await getZodiacKnowledge()
+    }, 'loadKnowledgeData')
+    
+    allKnowledge.value = result
+    console.log(`⏱️ Loaded knowledge data in: ${duration.toFixed(0)}ms`)
   } catch (error) {
     console.error('Failed to load knowledge:', error)
     message.error('加载失败，请稍后重试')
@@ -280,12 +298,23 @@ const loadData = async () => {
   }
 }
 
-watch([activeCategory, searchQuery], () => {
+watch([activeCategory, debouncedSearchQuery], () => {
   expandedItems.value = []
 })
 
 onMounted(() => {
   loadData()
+  isFirstLoad.value = false
+})
+
+onActivated(() => {
+  if (!isFirstLoad.value) {
+    userStore.recordPageView('knowledge', 'knowledge')
+  }
+})
+
+defineOptions({
+  name: 'Knowledge'
 })
 </script>
 

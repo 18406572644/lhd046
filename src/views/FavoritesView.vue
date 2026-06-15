@@ -55,14 +55,21 @@
           </NEmpty>
         </NCard>
 
-        <NList v-else class="favorite-list">
-          <NListItem 
-            v-for="item in sortedFavoriteFortunes" 
-            :key="item.id" 
-            class="favorite-item"
-            @click="navigateToFortune(item.dataId)"
-          >
-            <NCard class="glass-card favorite-card" bordered="false" hoverable>
+        <VirtualList
+          v-else
+          :data="sortedFavoriteFortunes"
+          :item-height="100"
+          container-height="600px"
+          :get-key="(item) => item.id"
+        >
+          <template #default="{ item }">
+            <NCard 
+              class="glass-card favorite-card" 
+              bordered="false" 
+              hoverable
+              @click="navigateToFortune(item.dataId)"
+              style="margin-bottom: 12px;"
+            >
               <div class="favorite-content">
                 <div class="favorite-icon">🔮</div>
                 <div class="favorite-info">
@@ -90,8 +97,8 @@
                 </NButton>
               </div>
             </NCard>
-          </NListItem>
-        </NList>
+          </template>
+        </VirtualList>
       </template>
 
       <template v-if="activeTab === 'compatibility'">
@@ -103,14 +110,21 @@
           </NEmpty>
         </NCard>
 
-        <NList v-else class="favorite-list">
-          <NListItem 
-            v-for="item in sortedFavoriteCompatibilities" 
-            :key="item.id" 
-            class="favorite-item"
-            @click="navigateToCompatibility(item.dataId)"
-          >
-            <NCard class="glass-card favorite-card" bordered="false" hoverable>
+        <VirtualList
+          v-else
+          :data="sortedFavoriteCompatibilities"
+          :item-height="100"
+          container-height="600px"
+          :get-key="(item) => item.id"
+        >
+          <template #default="{ item }">
+            <NCard 
+              class="glass-card favorite-card" 
+              bordered="false" 
+              hoverable
+              @click="navigateToCompatibility(item.dataId)"
+              style="margin-bottom: 12px;"
+            >
               <div class="favorite-content">
                 <div class="favorite-icon">💕</div>
                 <div class="favorite-info">
@@ -135,8 +149,8 @@
                 </NButton>
               </div>
             </NCard>
-          </NListItem>
-        </NList>
+          </template>
+        </VirtualList>
       </template>
 
       <template v-if="activeTab === 'knowledge'">
@@ -148,14 +162,21 @@
           </NEmpty>
         </NCard>
 
-        <NList v-else class="favorite-list">
-          <NListItem 
-            v-for="item in sortedFavoriteKnowledge" 
-            :key="item.id" 
-            class="favorite-item"
-            @click="navigateToKnowledge(item.dataId)"
-          >
-            <NCard class="glass-card favorite-card" bordered="false" hoverable>
+        <VirtualList
+          v-else
+          :data="sortedFavoriteKnowledge"
+          :item-height="100"
+          container-height="600px"
+          :get-key="(item) => item.id"
+        >
+          <template #default="{ item }">
+            <NCard 
+              class="glass-card favorite-card" 
+              bordered="false" 
+              hoverable
+              @click="navigateToKnowledge(item.dataId)"
+              style="margin-bottom: 12px;"
+            >
               <div class="favorite-content">
                 <div class="favorite-icon">📚</div>
                 <div class="favorite-info">
@@ -183,15 +204,15 @@
                 </NButton>
               </div>
             </NCard>
-          </NListItem>
-        </NList>
+          </template>
+        </VirtualList>
       </template>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onActivated } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMessage } from 'naive-ui'
 import { 
@@ -201,6 +222,7 @@ import {
 import { TrashOutline } from '@vicons/ionicons5'
 import { useUserStore } from '@/stores/userStore'
 import { getSignById } from '@/data/zodiacSigns'
+import VirtualList from '@/components/VirtualList.vue'
 import type { FavoriteItem } from '@/types'
 import { format } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
@@ -378,6 +400,23 @@ const handleUnfavorite = (type: FavoriteItem['type'], dataId: string) => {
   userStore.toggleFavorite(type, dataId)
   message.success('已取消收藏')
 }
+
+const isFirstLoad = ref(true)
+
+onMounted(() => {
+  userStore.recordPageView('fortune', 'favorites')
+  isFirstLoad.value = false
+})
+
+onActivated(() => {
+  if (!isFirstLoad.value) {
+    userStore.recordPageView('fortune', 'favorites')
+  }
+})
+
+defineOptions({
+  name: 'Favorites'
+})
 </script>
 
 <style scoped>
