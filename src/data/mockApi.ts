@@ -5,7 +5,11 @@ import type {
   PersonalityAnalysis, 
   CompatibilityMatch,
   ZodiacKnowledge,
-  LuckyItem
+  LuckyItem,
+  TrendData,
+  TrendDataPoint,
+  RadarData,
+  ZodiacRanking
 } from '@/types'
 import { zodiacSigns } from './zodiacSigns'
 import { format, startOfWeek, endOfWeek } from 'date-fns'
@@ -567,4 +571,141 @@ export const getLuckyItems = async (_signId?: string): Promise<LuckyItem[]> => {
   await delay(400)
   const shuffled = [...luckyItemsData].sort(() => Math.random() - 0.5)
   return shuffled.slice(0, 8)
+}
+
+const generateTrendScores = (baseScore: number, variance: number = 15): number => {
+  const change = Math.floor(Math.random() * variance * 2) - variance
+  return Math.max(50, Math.min(100, baseScore + change))
+}
+
+export const getTrendData = async (
+  signId: string,
+  timeRange: '7d' | '30d' | 'weekly' | 'monthly'
+): Promise<TrendData> => {
+  await delay(500)
+  
+  const today = new Date()
+  let days: number
+  let dateFormat: string
+  let labels: string[] = []
+  let dataPoints: TrendDataPoint[] = []
+
+  switch (timeRange) {
+    case '7d':
+      days = 7
+      dateFormat = 'MM-dd'
+      break
+    case '30d':
+      days = 30
+      dateFormat = 'MM-dd'
+      break
+    case 'weekly':
+      days = 7 * 4
+      dateFormat = "'第'II'周'"
+      break
+    case 'monthly':
+      days = 30 * 3
+      dateFormat = 'yyyy-MM'
+      break
+    default:
+      days = 7
+      dateFormat = 'MM-dd'
+  }
+
+  const baseOverall = generateRandomScore()
+  const baseLove = generateRandomScore()
+  const baseCareer = generateRandomScore()
+  const baseWealth = generateRandomScore()
+
+  for (let i = days - 1; i >= 0; i--) {
+    const date = new Date(today)
+    date.setDate(date.getDate() - i)
+    
+    let label: string
+    if (timeRange === 'weekly') {
+      const weekNum = Math.ceil((date.getDate() + new Date(date.getFullYear(), date.getMonth(), 1).getDay()) / 7)
+      label = `${date.getMonth() + 1}月第${weekNum}周`
+    } else if (timeRange === 'monthly') {
+      label = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+    } else {
+      label = format(date, dateFormat)
+    }
+
+    if (timeRange === 'weekly') {
+      const weekKey = label
+      if (!labels.includes(weekKey)) {
+        labels.push(weekKey)
+        dataPoints.push({
+          date: weekKey,
+          overallScore: generateTrendScores(baseOverall, 10),
+          loveScore: generateTrendScores(baseLove, 10),
+          careerScore: generateTrendScores(baseCareer, 10),
+          wealthScore: generateTrendScores(baseWealth, 10)
+        })
+      }
+    } else if (timeRange === 'monthly') {
+      const monthKey = label
+      if (!labels.includes(monthKey)) {
+        labels.push(monthKey)
+        dataPoints.push({
+          date: monthKey,
+          overallScore: generateTrendScores(baseOverall, 8),
+          loveScore: generateTrendScores(baseLove, 8),
+          careerScore: generateTrendScores(baseCareer, 8),
+          wealthScore: generateTrendScores(baseWealth, 8)
+        })
+      }
+    } else {
+      labels.push(label)
+      dataPoints.push({
+        date: label,
+        overallScore: generateTrendScores(baseOverall),
+        loveScore: generateTrendScores(baseLove),
+        careerScore: generateTrendScores(baseCareer),
+        wealthScore: generateTrendScores(baseWealth)
+      })
+    }
+  }
+
+  return {
+    signId,
+    timeRange,
+    labels,
+    dataPoints
+  }
+}
+
+export const getRadarData = async (signId: string): Promise<RadarData> => {
+  await delay(300)
+  
+  return {
+    signId,
+    love: generateRandomScore(),
+    career: generateRandomScore(),
+    wealth: generateRandomScore(),
+    health: generateRandomScore(),
+    overall: generateRandomScore()
+  }
+}
+
+export const getZodiacRanking = async (date: Date): Promise<ZodiacRanking> => {
+  await delay(600)
+  
+  const rankings = zodiacSigns.map(sign => ({
+    signId: sign.id,
+    signName: sign.name,
+    symbol: sign.symbol,
+    overallScore: generateRandomScore(),
+    rank: 0
+  }))
+  
+  rankings.sort((a, b) => b.overallScore - a.overallScore)
+  rankings.forEach((item, index) => {
+    item.rank = index + 1
+  })
+
+  return {
+    date: format(date, 'yyyy-MM-dd'),
+    rankings
+  }
 }

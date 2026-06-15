@@ -45,7 +45,8 @@ import {
   BookOutline,
   NotificationsOutline,
   StarOutline,
-  BookmarkOutline
+  BookmarkOutline,
+  BarChartOutline
 } from '@vicons/ionicons5'
 
 const route = useRoute()
@@ -59,6 +60,7 @@ interface MenuItem {
 const desktopMenu: MenuItem[] = [
   { name: '首页', path: '/', icon: HomeOutline },
   { name: '每日运势', path: '/fortune', icon: TodayOutline },
+  { name: '运势趋势', path: '/trend', icon: BarChartOutline },
   { name: '星座配对', path: '/compatibility', icon: HeartOutline },
   { name: '性格分析', path: '/personality', icon: PersonOutline },
   { name: '幸运物', path: '/lucky', icon: GiftOutline },
@@ -70,8 +72,8 @@ const desktopMenu: MenuItem[] = [
 const mobileMenu: MenuItem[] = [
   { name: '首页', path: '/', icon: HomeOutline },
   { name: '运势', path: '/fortune', icon: TodayOutline },
+  { name: '趋势', path: '/trend', icon: BarChartOutline },
   { name: '配对', path: '/compatibility', icon: HeartOutline },
-  { name: '性格', path: '/personality', icon: PersonOutline },
   { name: '收藏', path: '/favorites', icon: StarOutline }
 ]
 </script>

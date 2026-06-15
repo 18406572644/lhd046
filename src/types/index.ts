@@ -111,3 +111,40 @@ export interface FavoriteItem {
   dataId: string
   savedAt: string
 }
+
+export interface TrendDataPoint {
+  date: string
+  overallScore: number
+  loveScore: number
+  careerScore: number
+  wealthScore: number
+}
+
+export interface TrendData {
+  signId: string
+  timeRange: '7d' | '30d' | 'weekly' | 'monthly'
+  labels: string[]
+  dataPoints: TrendDataPoint[]
+}
+
+export interface RadarData {
+  signId: string
+  love: number
+  career: number
+  wealth: number
+  health: number
+  overall: number
+}
+
+export interface ZodiacRankItem {
+  signId: string
+  signName: string
+  symbol: string
+  overallScore: number
+  rank: number
+}
+
+export interface ZodiacRanking {
+  date: string
+  rankings: ZodiacRankItem[]
+}
