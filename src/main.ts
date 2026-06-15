@@ -12,7 +12,7 @@ import {
 import App from './App.vue'
 import router from './router'
 import './style.css'
-import { initPerformanceMonitoring } from './utils/performance'
+import { initPerformanceMonitoring, getPerformanceScore, getPerformanceReport } from './utils/performance'
 
 const naive = create({
   components: [NMessageProvider, NDialogProvider, NLoadingBarProvider]
@@ -103,14 +103,12 @@ if (typeof window !== 'undefined') {
     initPerformanceMonitoring()
     
     setTimeout(() => {
-      import('./utils/performance').then(({ getPerformanceScore, getPerformanceReport }) => {
-        const scores = getPerformanceScore()
-        const report = getPerformanceReport()
-        console.log('🚀 Performance Monitoring Initialized')
-        console.log('📊 Performance Score:', scores.performance)
-        console.log('🎨 Experience Score:', scores.experience)
-        console.log('📈 Full Report:', report)
-      })
+      const scores = getPerformanceScore()
+      const report = getPerformanceReport()
+      console.log('🚀 Performance Monitoring Initialized')
+      console.log('📊 Performance Score:', scores.performance)
+      console.log('🎨 Experience Score:', scores.experience)
+      console.log('📈 Full Report:', report)
     }, 3000)
   })
 }

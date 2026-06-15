@@ -2,21 +2,11 @@ import { createRouter, createWebHashHistory, type RouteRecordRaw } from 'vue-rou
 import { nextTick } from 'vue'
 import { recordPageStart, recordPageLoad, requestIdleCallback } from '@/utils/performance'
 
-const asyncImport = (path: string) => {
-  return () => {
-    const component = import(/* @vite-ignore */ path)
-    component.catch((err) => {
-      console.error('Failed to load component:', err)
-    })
-    return component
-  }
-}
-
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
     name: 'Home',
-    component: asyncImport('@/views/HomeView.vue'),
+    component: () => import('@/views/HomeView.vue'),
     meta: {
       keepAlive: true,
       preload: true,
@@ -26,7 +16,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/fortune',
     name: 'Fortune',
-    component: asyncImport('@/views/FortuneView.vue'),
+    component: () => import('@/views/FortuneView.vue'),
     meta: {
       keepAlive: true,
       preload: true,
@@ -36,7 +26,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/compatibility',
     name: 'Compatibility',
-    component: asyncImport('@/views/CompatibilityView.vue'),
+    component: () => import('@/views/CompatibilityView.vue'),
     meta: {
       keepAlive: false,
       preload: true,
@@ -46,7 +36,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/personality',
     name: 'Personality',
-    component: asyncImport('@/views/PersonalityView.vue'),
+    component: () => import('@/views/PersonalityView.vue'),
     meta: {
       keepAlive: false,
       preload: true,
@@ -56,7 +46,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/lucky',
     name: 'Lucky',
-    component: asyncImport('@/views/LuckyView.vue'),
+    component: () => import('@/views/LuckyView.vue'),
     meta: {
       keepAlive: false,
       preload: true,
@@ -66,7 +56,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/knowledge',
     name: 'Knowledge',
-    component: asyncImport('@/views/KnowledgeView.vue'),
+    component: () => import('@/views/KnowledgeView.vue'),
     meta: {
       keepAlive: true,
       preload: true,
@@ -76,7 +66,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/reminder',
     name: 'Reminder',
-    component: asyncImport('@/views/ReminderView.vue'),
+    component: () => import('@/views/ReminderView.vue'),
     meta: {
       keepAlive: false,
       preload: false,
@@ -86,7 +76,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/favorites',
     name: 'Favorites',
-    component: asyncImport('@/views/FavoritesView.vue'),
+    component: () => import('@/views/FavoritesView.vue'),
     meta: {
       keepAlive: true,
       preload: true,
@@ -96,7 +86,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/trend',
     name: 'Trend',
-    component: asyncImport('@/views/TrendView.vue'),
+    component: () => import('@/views/TrendView.vue'),
     meta: {
       keepAlive: false,
       preload: false,
