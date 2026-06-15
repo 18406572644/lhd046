@@ -1,27 +1,29 @@
 <template>
   <div class="app-container">
     <StarSky />
-    <NMessageProvider>
-      <NDialogProvider>
-        <NLoadingBarProvider>
-          <div class="app-content">
-            <MainNav />
-            <main class="main-content">
-              <router-view v-slot="{ Component }">
-                <transition name="fade" mode="out-in">
-                  <component :is="Component" />
-                </transition>
-              </router-view>
-            </main>
-          </div>
-        </NLoadingBarProvider>
-      </NDialogProvider>
-    </NMessageProvider>
+    <NConfigProvider :theme="darkTheme" :locale="zhCN" :date-locale="dateZhCN">
+      <NMessageProvider>
+        <NDialogProvider>
+          <NLoadingBarProvider>
+            <div class="app-content">
+              <MainNav />
+              <main class="main-content">
+                <router-view v-slot="{ Component }">
+                  <transition name="fade" mode="out-in">
+                    <component :is="Component" />
+                  </transition>
+                </router-view>
+              </main>
+            </div>
+          </NLoadingBarProvider>
+        </NDialogProvider>
+      </NMessageProvider>
+    </NConfigProvider>
   </div>
 </template>
 
 <script setup lang="ts">
-import { NMessageProvider, NDialogProvider, NLoadingBarProvider } from 'naive-ui'
+import { NConfigProvider, NMessageProvider, NDialogProvider, NLoadingBarProvider, darkTheme, zhCN, dateZhCN } from 'naive-ui'
 import StarSky from '@/components/StarSky.vue'
 import MainNav from '@/components/MainNav.vue'
 </script>

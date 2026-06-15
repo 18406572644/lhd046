@@ -9,7 +9,7 @@
       <p class="page-subtitle">设置重要日子的自定义提醒</p>
 
       <div class="action-bar">
-        <NButton type="primary" @click="openAddModal" class="add-btn">
+        <NButton type="primary" @click="safeOpenAddModal" class="add-btn">
           <template #icon>
             <NIcon :component="AddOutline" />
           </template>
@@ -17,7 +17,7 @@
         </NButton>
       </div>
 
-      <NCard v-if="userStore.reminders.length === 0" class="glass-card empty-card" bordered="false">
+      <NCard v-if="!hasReminders" class="glass-card empty-card" bordered="false">
         <NEmpty description="暂无提醒，点击上方按钮添加">
           <template #icon>
             <div class="empty-icon">🔔</div>
@@ -26,7 +26,11 @@
       </NCard>
 
       <NList v-else class="reminder-list">
-        <NListItem v-for="reminder in sortedReminders" :key="reminder.id" class="reminder-item">
+        <NListItem 
+          v-for="reminder in sortedReminders" 
+          :key="reminder.id" 
+          class="reminder-item"
+        >
           <NCard class="glass-card reminder-card" bordered="false">
             <div class="reminder-header">
               <div class="reminder-icon">
@@ -45,7 +49,7 @@
               </div>
               <NSwitch 
                 :value="reminder.enabled" 
-                @update:value="(val) => toggleReminder(reminder.id, val)"
+                @update:value="(val) => safeToggleReminder(reminder.id, val)"
                 class="reminder-switch"
               />
             </div>
@@ -53,11 +57,11 @@
             <div class="reminder-body">
               <div class="reminder-detail">
                 <span class="detail-icon">📅</span>
-                <span class="detail-text">{{ formatDate(reminder.date) }}</span>
+                <span class="detail-text">{{ safeFormatDate(reminder.date) }}</span>
               </div>
               <div class="reminder-detail">
                 <span class="detail-icon">⏰</span>
-                <span class="detail-text">{{ reminder.time }}</span>
+                <span class="detail-text">{{ reminder.time || '未设置' }}</span>
               </div>
               <div class="reminder-detail">
                 <span class="detail-icon">🔄</span>
@@ -69,13 +73,13 @@
             </div>
 
             <div class="reminder-actions">
-              <NButton size="small" type="default" @click="openEditModal(reminder)">
+              <NButton size="small" type="default" @click="safeOpenEditModal(reminder)">
                 <template #icon>
                   <NIcon :component="CreateOutline" />
                 </template>
                 编辑
               </NButton>
-              <NButton size="small" type="error" @click="handleDelete(reminder.id)">
+              <NButton size="small" type="error" @click="safeHandleDelete(reminder.id)">
                 <template #icon>
                   <NIcon :component="TrashOutline" />
                 </template>
@@ -94,9 +98,19 @@
       class="reminder-modal"
       :mask-closable="false"
     >
-      <NForm ref="formRef" :model="formData" :rules="rules" label-placement="top">
+      <NForm 
+        ref="formRef" 
+        :model="formData" 
+        :rules="rules" 
+        label-placement="top"
+        :show-label="true"
+      >
         <NFormItem label="提醒标题" path="title">
-          <NInput v-model:value="formData.title" placeholder="请输入提醒标题" />
+          <NInput 
+            v-model:value="formData.title" 
+            placeholder="请输入提醒标题"
+            clearable
+          />
         </NFormItem>
 
         <NFormItem label="关联星座" path="signId">
@@ -104,8 +118,7 @@
             v-model:value="formData.signId" 
             :options="signOptions" 
             placeholder="请选择星座"
-            label-field="name"
-            value-field="id"
+            clearable
           >
             <template #option="{ option }">
               <span class="select-option">
@@ -124,6 +137,7 @@
               placeholder="选择日期"
               value-format="YYYY-MM-DD"
               style="width: 100%"
+              clearable
             />
           </NFormItem>
 
@@ -133,6 +147,7 @@
               placeholder="选择时间"
               value-format="HH:mm"
               style="width: 100%"
+              clearable
             />
           </NFormItem>
         </div>
@@ -160,8 +175,8 @@
       </NForm>
 
       <template #footer>
-        <NButton @click="showModal = false">取消</NButton>
-        <NButton type="primary" @click="handleSubmit">确认</NButton>
+        <NButton @click="safeCloseModal">取消</NButton>
+        <NButton type="primary" @click="safeHandleSubmit">确认</NButton>
       </template>
     </NModal>
 
@@ -169,7 +184,7 @@
       <p>确定要删除这个提醒吗？此操作无法撤销。</p>
       <template #footer>
         <NButton @click="showDeleteConfirm = false">取消</NButton>
-        <NButton type="error" @click="confirmDelete">删除</NButton>
+        <NButton type="error" @click="safeConfirmDelete">删除</NButton>
       </template>
     </NModal>
   </div>
@@ -178,7 +193,7 @@
 <script setup lang="ts">
 import { ref, computed, reactive } from 'vue'
 import { useMessage } from 'naive-ui'
-import type { FormInst } from 'naive-ui/es/form/src/interface'
+import type { FormRules, FormInst } from 'naive-ui'
 import { 
   NCard, NButton, NIcon, NTag, NList, NListItem, NModal, 
   NForm, NFormItem, NInput, NSelect, NDatePicker, NTimePicker, 
@@ -192,8 +207,8 @@ import { format } from 'date-fns'
 
 const userStore = useUserStore()
 const message = useMessage()
-const formRef = ref<FormInst | null>(null)
 
+const formRef = ref<FormInst | null>(null)
 const showModal = ref(false)
 const showDeleteConfirm = ref(false)
 const editingReminder = ref<CustomReminder | null>(null)
@@ -209,7 +224,7 @@ const formData = reactive({
   enabled: true
 })
 
-const rules = {
+const rules: FormRules = {
   title: { required: true, message: '请输入提醒标题', trigger: 'blur' },
   signId: { required: true, message: '请选择关联星座', trigger: 'change' },
   date: { required: true, message: '请选择提醒日期', trigger: 'change' },
@@ -234,116 +249,232 @@ const repeatOptions = [
   { label: '每月', value: 'monthly' }
 ]
 
-const sortedReminders = computed(() => 
-  [...userStore.reminders].sort((a, b) => {
-    if (a.enabled !== b.enabled) return a.enabled ? -1 : 1
-    return new Date(`${b.date}T${b.time}`).getTime() - new Date(`${a.date}T${a.time}`).getTime()
-  })
-)
+const hasReminders = computed(() => {
+  try {
+    return userStore.reminders && userStore.reminders.length > 0
+  } catch {
+    return false
+  }
+})
+
+const sortedReminders = computed(() => {
+  try {
+    if (!userStore.reminders || !Array.isArray(userStore.reminders)) {
+      return []
+    }
+    return [...userStore.reminders].sort((a, b) => {
+      if (!a || !b) return 0
+      if (a.enabled !== b.enabled) return a.enabled ? -1 : 1
+      try {
+        const timeA = new Date(`${a.date}T${a.time}`).getTime()
+        const timeB = new Date(`${b.date}T${b.time}`).getTime()
+        return timeB - timeA
+      } catch {
+        return 0
+      }
+    })
+  } catch {
+    return []
+  }
+})
 
 const getStarStyle = (index: number) => {
-  const left = Math.random() * 100
-  const top = Math.random() * 100
-  const size = Math.random() * 3 + 1
-  const delay = Math.random() * 3
-  return {
-    left: `${left}%`,
-    top: `${top}%`,
-    width: `${size}px`,
-    height: `${size}px`,
-    animationDelay: `${delay}s`
+  try {
+    const left = Math.random() * 100
+    const top = Math.random() * 100
+    const size = Math.random() * 3 + 1
+    const delay = Math.random() * 3
+    return {
+      left: `${left}%`,
+      top: `${top}%`,
+      width: `${size}px`,
+      height: `${size}px`,
+      animationDelay: `${delay}s`
+    }
+  } catch {
+    return {}
   }
 }
 
 const getSignSymbol = (signId: string) => {
-  const sign = getSignById(signId)
-  return sign?.symbol || '✨'
+  try {
+    const sign = getSignById(signId)
+    return sign?.symbol || '✨'
+  } catch {
+    return '✨'
+  }
 }
 
 const getSignName = (signId: string) => {
-  const sign = getSignById(signId)
-  return sign?.name || '未知'
+  try {
+    const sign = getSignById(signId)
+    return sign?.name || '未知'
+  } catch {
+    return '未知'
+  }
 }
 
-const formatDate = (dateStr: string) => {
+const safeFormatDate = (dateStr: string) => {
   try {
+    if (!dateStr) return '未设置'
     return format(new Date(dateStr), 'yyyy年MM月dd日')
   } catch {
-    return dateStr
+    return dateStr || '未设置'
   }
 }
 
 const getRepeatText = (repeat: CustomReminder['repeat']) => {
-  const map: Record<string, string> = {
-    none: '不重复',
-    daily: '每日重复',
-    weekly: '每周重复',
-    monthly: '每月重复'
+  try {
+    const map: Record<string, string> = {
+      none: '不重复',
+      daily: '每日重复',
+      weekly: '每周重复',
+      monthly: '每月重复'
+    }
+    return map[repeat] || repeat
+  } catch {
+    return '不重复'
   }
-  return map[repeat] || repeat
-}
-
-const openAddModal = () => {
-  editingReminder.value = null
-  resetForm()
-  showModal.value = true
-}
-
-const openEditModal = (reminder: CustomReminder) => {
-  editingReminder.value = reminder
-  formData.title = reminder.title
-  formData.signId = reminder.signId
-  formData.date = reminder.date
-  formData.time = reminder.time
-  formData.repeat = reminder.repeat
-  formData.description = reminder.description
-  formData.enabled = reminder.enabled
-  showModal.value = true
 }
 
 const resetForm = () => {
-  formData.title = ''
-  formData.signId = ''
-  formData.date = ''
-  formData.time = ''
-  formData.repeat = 'none'
-  formData.description = ''
-  formData.enabled = true
-}
-
-const handleSubmit = () => {
-  formRef.value?.validate((errors) => {
-    if (!errors) {
-      if (editingReminder.value) {
-        userStore.updateReminder(editingReminder.value.id, { ...formData })
-        message.success('提醒已更新')
-      } else {
-        userStore.addReminder({ ...formData })
-        message.success('提醒已添加')
-      }
-      showModal.value = false
-      resetForm()
-    }
-  })
-}
-
-const toggleReminder = (id: string, enabled: boolean) => {
-  userStore.updateReminder(id, { enabled })
-  message.success(enabled ? '提醒已启用' : '提醒已禁用')
-}
-
-const handleDelete = (id: string) => {
-  deletingId.value = id
-  showDeleteConfirm.value = true
-}
-
-const confirmDelete = () => {
-  if (deletingId.value) {
-    userStore.deleteReminder(deletingId.value)
-    message.success('提醒已删除')
+  try {
+    formData.title = ''
+    formData.signId = ''
+    formData.date = ''
+    formData.time = ''
+    formData.repeat = 'none'
+    formData.description = ''
+    formData.enabled = true
+  } catch (e) {
+    console.error('Error resetting form:', e)
   }
-  showDeleteConfirm.value = false
-  deletingId.value = null
+}
+
+const safeOpenAddModal = () => {
+  try {
+    editingReminder.value = null
+    resetForm()
+    showModal.value = true
+  } catch (e) {
+    console.error('Error opening add modal:', e)
+    message.error('打开添加提醒失败，请重试')
+  }
+}
+
+const safeOpenEditModal = (reminder: CustomReminder) => {
+  try {
+    if (!reminder) return
+    editingReminder.value = reminder
+    formData.title = reminder.title || ''
+    formData.signId = reminder.signId || ''
+    formData.date = reminder.date || ''
+    formData.time = reminder.time || ''
+    formData.repeat = reminder.repeat || 'none'
+    formData.description = reminder.description || ''
+    formData.enabled = reminder.enabled ?? true
+    showModal.value = true
+  } catch (e) {
+    console.error('Error opening edit modal:', e)
+    message.error('打开编辑提醒失败，请重试')
+  }
+}
+
+const safeCloseModal = () => {
+  try {
+    showModal.value = false
+    setTimeout(() => resetForm(), 300)
+  } catch (e) {
+    console.error('Error closing modal:', e)
+    showModal.value = false
+  }
+}
+
+const safeHandleSubmit = () => {
+  try {
+    if (!formRef.value) {
+      message.error('表单未正确初始化，请刷新页面重试')
+      return
+    }
+    
+    formRef.value.validate((errors) => {
+      try {
+        if (!errors) {
+          if (editingReminder.value && editingReminder.value.id) {
+            userStore.updateReminder(editingReminder.value.id, {
+              title: formData.title,
+              signId: formData.signId,
+              date: formData.date,
+              time: formData.time,
+              repeat: formData.repeat,
+              description: formData.description,
+              enabled: formData.enabled
+            })
+            message.success('提醒已更新')
+          } else {
+            userStore.addReminder({
+              title: formData.title,
+              signId: formData.signId,
+              date: formData.date,
+              time: formData.time,
+              repeat: formData.repeat,
+              description: formData.description,
+              enabled: formData.enabled
+            })
+            message.success('提醒已添加')
+          }
+          showModal.value = false
+          resetForm()
+        } else {
+          message.warning('请填写完整的表单信息')
+        }
+      } catch (e) {
+        console.error('Error in form validation callback:', e)
+        message.error('保存提醒失败，请重试')
+      }
+    })
+  } catch (e) {
+    console.error('Error handling submit:', e)
+    message.error('保存提醒失败，请重试')
+  }
+}
+
+const safeToggleReminder = (id: string, enabled: boolean) => {
+  try {
+    if (!id) return
+    userStore.updateReminder(id, { enabled })
+    message.success(enabled ? '提醒已启用' : '提醒已禁用')
+  } catch (e) {
+    console.error('Error toggling reminder:', e)
+    message.error('操作失败，请重试')
+  }
+}
+
+const safeHandleDelete = (id: string) => {
+  try {
+    if (!id) return
+    deletingId.value = id
+    showDeleteConfirm.value = true
+  } catch (e) {
+    console.error('Error handling delete:', e)
+    message.error('操作失败，请重试')
+  }
+}
+
+const safeConfirmDelete = () => {
+  try {
+    if (deletingId.value) {
+      userStore.deleteReminder(deletingId.value)
+      message.success('提醒已删除')
+    }
+    showDeleteConfirm.value = false
+    deletingId.value = null
+  } catch (e) {
+    console.error('Error confirming delete:', e)
+    message.error('删除失败，请重试')
+    showDeleteConfirm.value = false
+    deletingId.value = null
+  }
 }
 </script>
 
@@ -429,7 +560,7 @@ const confirmDelete = () => {
 .reminder-icon {
   font-size: 40px;
   line-height: 1;
-  filter: drop-shadow(0 0 10px rgba(168, 85, 247, 0.5));
+  filter: drop-shadow(0 0 10px rgba(179, 102, 255, 0.5));
 }
 
 .reminder-info {
@@ -440,7 +571,7 @@ const confirmDelete = () => {
 .reminder-title {
   font-size: 18px;
   font-weight: 600;
-  color: var(--star-white);
+  color: var(--text-primary);
   margin-bottom: 8px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -469,7 +600,8 @@ const confirmDelete = () => {
   gap: 10px;
   margin-bottom: 8px;
   font-size: 14px;
-  color: var(--pale-lavender);
+  color: var(--text-secondary);
+  font-weight: 500;
 }
 
 .detail-icon {
@@ -486,8 +618,9 @@ const confirmDelete = () => {
   background: rgba(255, 255, 255, 0.05);
   border-radius: 8px;
   font-size: 13px;
-  color: var(--pale-lavender);
+  color: var(--text-secondary);
   line-height: 1.6;
+  font-weight: 500;
 }
 
 .reminder-actions {
@@ -517,6 +650,7 @@ const confirmDelete = () => {
 
 .option-name {
   font-size: 14px;
+  color: var(--text-primary);
 }
 
 .reminder-modal :deep(.n-modal-card) {
@@ -525,17 +659,20 @@ const confirmDelete = () => {
 }
 
 .reminder-modal :deep(.n-modal-card-title) {
-  color: var(--star-white) !important;
+  color: var(--text-primary) !important;
+  font-weight: 600;
 }
 
 .reminder-modal :deep(.n-form-item-label) {
-  color: var(--pale-lavender) !important;
+  color: var(--text-secondary) !important;
+  font-weight: 500;
 }
 
 :deep(.n-select-option) {
   display: flex !important;
   align-items: center !important;
   gap: 8px !important;
+  color: var(--text-primary) !important;
 }
 
 @media (max-width: 768px) {
