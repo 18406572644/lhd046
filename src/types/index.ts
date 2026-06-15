@@ -148,3 +148,53 @@ export interface ZodiacRanking {
   date: string
   rankings: ZodiacRankItem[]
 }
+
+export type BehaviorType = 'view' | 'click' | 'favorite' | 'share' | 'stay'
+
+export interface UserBehavior {
+  id: string
+  type: BehaviorType
+  targetType: 'fortune' | 'compatibility' | 'lucky' | 'knowledge' | 'zodiac'
+  targetId: string
+  signId?: string
+  duration?: number
+  timestamp: string
+}
+
+export interface InterestTag {
+  id: string
+  name: string
+  type: 'zodiac' | 'feature'
+  weight: number
+  lastUpdated: string
+}
+
+export type HomeModuleId = 
+  | 'dailyFortune' 
+  | 'quickEntries' 
+  | 'recentView' 
+  | 'zodiacList'
+
+export interface HomeModule {
+  id: HomeModuleId
+  name: string
+  icon: string
+  visible: boolean
+  order: number
+}
+
+export interface RecentViewItem {
+  id: string
+  type: 'fortune' | 'compatibility' | 'lucky' | 'knowledge'
+  title: string
+  subtitle: string
+  icon: string
+  targetId: string
+  signId?: string
+  viewedAt: string
+}
+
+export interface HomeLayoutConfig {
+  modules: HomeModule[]
+  zodiacSortMode: 'default' | 'interest' | 'score'
+}
