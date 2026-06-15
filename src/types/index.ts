@@ -77,12 +77,38 @@ export interface CompatibilityMatch {
   advice: string
 }
 
+export interface KnowledgeSection {
+  id: string
+  title: string
+  anchor: string
+  level: number
+}
+
+export interface KnowledgeParagraph {
+  type: 'text' | 'heading' | 'quote' | 'list' | 'image'
+  content: string
+  level?: number
+  items?: string[]
+  src?: string
+  alt?: string
+}
+
 export interface ZodiacKnowledge {
   id: string
   title: string
-  category: 'history' | 'mythology' | 'symbolism' | 'science'
-  content: string
-  image?: string
+  subtitle?: string
+  category: 'history' | 'mythology' | 'symbolism' | 'science' | 'feature'
+  tags: string[]
+  author: string
+  source: string
+  publishDate: string
+  readMinutes: number
+  summary: string
+  coverImage?: string
+  sections: KnowledgeSection[]
+  paragraphs: KnowledgeParagraph[]
+  relatedIds: string[]
+  wordCount: number
 }
 
 export interface CustomReminder {
@@ -271,4 +297,23 @@ export interface FortuneFluctuation {
     fluctuation: number
   }[]
   advice: string
+}
+
+export interface ReadingProgress {
+  articleId: string
+  readPercent: number
+  lastReadPosition: number
+  isRead: boolean
+  lastReadAt: string
+  startedAt?: string
+}
+
+export type FontSize = 'small' | 'medium' | 'large'
+export type ThemeMode = 'default' | 'night' | 'sepia' | 'light'
+
+export interface ReadingSettings {
+  fontSize: FontSize
+  theme: ThemeMode
+  showToc: boolean
+  autoMarkRead: boolean
 }

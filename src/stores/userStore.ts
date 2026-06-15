@@ -12,7 +12,11 @@ import type {
   BehaviorType,
   SmartReminder,
   SmartReminderSettings,
-  ReminderSensitivity
+  ReminderSensitivity,
+  ReadingProgress,
+  ReadingSettings,
+  FontSize,
+  ThemeMode
 } from '@/types'
 import { zodiacSigns, getSignById } from '@/data/zodiacSigns'
 
@@ -99,6 +103,28 @@ const createDefaultSmartReminderSettings = (): SmartReminderSettings => ({
   pushTime: '08:00'
 })
 
+const createDefaultReadingSettings = (): ReadingSettings => ({
+  fontSize: 'medium',
+  theme: 'default',
+  showToc: true,
+  autoMarkRead: true
+})
+
+const normalizeReadingSettings = (raw: any): ReadingSettings => {
+  const defaults = createDefaultReadingSettings()
+  if (!raw || typeof raw !== 'object') return defaults
+
+  const validFontSizes: FontSize[] = ['small', 'medium', 'large']
+  const validThemes: ThemeMode[] = ['default', 'night', 'sepia', 'light']
+
+  return {
+    fontSize: validFontSizes.includes(raw.fontSize) ? raw.fontSize : defaults.fontSize,
+    theme: validThemes.includes(raw.theme) ? raw.theme : defaults.theme,
+    showToc: typeof raw.showToc === 'boolean' ? raw.showToc : defaults.showToc,
+    autoMarkRead: typeof raw.autoMarkRead === 'boolean' ? raw.autoMarkRead : defaults.autoMarkRead
+  }
+}
+
 interface StoredData {
   reminders: CustomReminder[]
   favorites: FavoriteItem[]
@@ -110,6 +136,8 @@ interface StoredData {
   smartReminders: SmartReminder[]
   smartReminderSettings: SmartReminderSettings
   lastSmartReminderDate: string
+  readingProgress: ReadingProgress[]
+  readingSettings: ReadingSettings
 }
 
 const normalizeSmartReminderSettings = (raw: any): SmartReminderSettings => {
@@ -146,7 +174,9 @@ const loadFromStorage = (): StoredData => {
         recentViews: Array.isArray(parsed.recentViews) ? parsed.recentViews : [],
         smartReminders: Array.isArray(parsed.smartReminders) ? parsed.smartReminders : [],
         smartReminderSettings: normalizeSmartReminderSettings(parsed.smartReminderSettings),
-        lastSmartReminderDate: typeof parsed.lastSmartReminderDate === 'string' ? parsed.lastSmartReminderDate : ''
+        lastSmartReminderDate: typeof parsed.lastSmartReminderDate === 'string' ? parsed.lastSmartReminderDate : '',
+        readingProgress: Array.isArray(parsed.readingProgress) ? parsed.readingProgress : [],
+        readingSettings: normalizeReadingSettings(parsed.readingSettings)
       }
     }
   } catch (e) {
@@ -162,7 +192,9 @@ const loadFromStorage = (): StoredData => {
     recentViews: [],
     smartReminders: [],
     smartReminderSettings: createDefaultSmartReminderSettings(),
-    lastSmartReminderDate: ''
+    lastSmartReminderDate: '',
+    readingProgress: [],
+    readingSettings: createDefaultReadingSettings()
   }
 }
 
@@ -179,6 +211,8 @@ export const useUserStore = defineStore('user', () => {
   const smartReminders = ref<SmartReminder[]>(storedData.smartReminders)
   const smartReminderSettings = ref<SmartReminderSettings>(storedData.smartReminderSettings)
   const lastSmartReminderDate = ref<string>(storedData.lastSmartReminderDate)
+  const readingProgress = ref<ReadingProgress[]>(storedData.readingProgress)
+  const readingSettings = ref<ReadingSettings>(storedData.readingSettings)
   
   const favoriteFortunes = computed(() => 
     favorites.value.filter(f => f.type === 'fortune')
@@ -320,6 +354,71 @@ export const useUserStore = defineStore('user', () => {
 
   const setLastSmartReminderDate = (date: string) => {
     lastSmartReminderDate.value = date
+  }
+
+  const getReadingProgress = (articleId: string): ReadingProgress | undefined => {
+    return readingProgress.value.find(p => p.articleId === articleId)
+  }
+
+  const updateReadingProgress = (
+    articleId: string,
+    updates: Partial<Omit<ReadingProgress, 'articleId'>>
+  ) => {
+    const existingIndex = readingProgress.value.findIndex(p => p.articleId === articleId)
+    const now = new Date().toISOString()
+
+    if (existingIndex >= 0) {
+      readingProgress.value[existingIndex] = {
+        ...readingProgress.value[existingIndex],
+        ...updates,
+        lastReadAt: now
+      }
+    } else {
+      readingProgress.value.push({
+        articleId,
+        readPercent: updates.readPercent || 0,
+        lastReadPosition: updates.lastReadPosition || 0,
+        isRead: updates.isRead || false,
+        startedAt: now,
+        lastReadAt: now
+      })
+    }
+  }
+
+  const markArticleAsRead = (articleId: string) => {
+    updateReadingProgress(articleId, {
+      readPercent: 100,
+      isRead: true
+    })
+  }
+
+  const isArticleRead = (articleId: string): boolean => {
+    const progress = getReadingProgress(articleId)
+    return progress?.isRead || false
+  }
+
+  const getReadPercent = (articleId: string): number => {
+    const progress = getReadingProgress(articleId)
+    return progress?.readPercent || 0
+  }
+
+  const updateReadingSettings = (settings: Partial<ReadingSettings>) => {
+    readingSettings.value = {
+      ...readingSettings.value,
+      ...settings
+    }
+  }
+
+  const setFontSize = (size: FontSize) => {
+    readingSettings.value.fontSize = size
+  }
+
+  const setTheme = (theme: ThemeMode) => {
+    readingSettings.value.theme = theme
+  }
+
+  const toggleToc = () => {
+    readingSettings.value.showToc = !readingSettings.value.showToc
   }
   
   const setDefaultSign = (signId: string) => {
@@ -516,7 +615,7 @@ export const useUserStore = defineStore('user', () => {
   
   let saveTimer: number | null = null
   watch(
-    [reminders, favorites, defaultSign, behaviors, interestTags, layoutConfig, recentViews, smartReminders, smartReminderSettings, lastSmartReminderDate],
+    [reminders, favorites, defaultSign, behaviors, interestTags, layoutConfig, recentViews, smartReminders, smartReminderSettings, lastSmartReminderDate, readingProgress, readingSettings],
     () => {
       if (saveTimer !== null) {
         clearTimeout(saveTimer)
@@ -533,7 +632,9 @@ export const useUserStore = defineStore('user', () => {
             recentViews: recentViews.value,
             smartReminders: smartReminders.value,
             smartReminderSettings: smartReminderSettings.value,
-            lastSmartReminderDate: lastSmartReminderDate.value
+            lastSmartReminderDate: lastSmartReminderDate.value,
+            readingProgress: readingProgress.value,
+            readingSettings: readingSettings.value
           }
           localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
         } catch (e) {
@@ -555,6 +656,8 @@ export const useUserStore = defineStore('user', () => {
     smartReminders,
     smartReminderSettings,
     lastSmartReminderDate,
+    readingProgress,
+    readingSettings,
     favoriteFortunes,
     favoriteCompatibilities,
     favoriteKnowledge,
@@ -590,6 +693,15 @@ export const useUserStore = defineStore('user', () => {
     reorderModules,
     setZodiacSortMode,
     applyLayoutConfig,
-    resetLayoutToDefault
+    resetLayoutToDefault,
+    getReadingProgress,
+    updateReadingProgress,
+    markArticleAsRead,
+    isArticleRead,
+    getReadPercent,
+    updateReadingSettings,
+    setFontSize,
+    setTheme,
+    toggleToc
   }
 })
