@@ -198,3 +198,77 @@ export interface HomeLayoutConfig {
   modules: HomeModule[]
   zodiacSortMode: 'default' | 'interest' | 'score'
 }
+
+export type ReminderSensitivity = 'high' | 'medium' | 'low'
+
+export type SmartReminderType = 'fortune_warning' | 'astronomical_event'
+
+export type AstronomicalEventType = 
+  | 'mercury_retrograde'
+  | 'mars_retrograde'
+  | 'venus_retrograde'
+  | 'saturn_retrograde'
+  | 'full_moon'
+  | 'new_moon'
+  | 'solar_eclipse'
+  | 'lunar_eclipse'
+
+export interface AstronomicalEvent {
+  id: string
+  type: AstronomicalEventType
+  name: string
+  description: string
+  startDate: string
+  endDate: string
+  icon: string
+  impactLevel: 'high' | 'medium' | 'low'
+  advice: string
+}
+
+export interface SmartReminderSettings {
+  enabled: boolean
+  sensitivity: ReminderSensitivity
+  fortuneWarning: boolean
+  astronomicalEvents: boolean
+  wifiOnly: boolean
+  dndEnabled: boolean
+  dndStart: string
+  dndEnd: string
+  pushTime: string
+}
+
+export interface SmartReminder {
+  id: string
+  type: SmartReminderType
+  signId: string
+  title: string
+  content: string
+  direction: 'up' | 'down' | 'neutral'
+  affectedAreas: string[]
+  advice: string
+  scoreChange?: number
+  currentScore?: number
+  averageScore?: number
+  astronomicalEvent?: AstronomicalEvent
+  triggeredAt: string
+  read: boolean
+  sensitivity: ReminderSensitivity
+}
+
+export interface FortuneFluctuation {
+  signId: string
+  date: string
+  currentScore: number
+  average7Days: number
+  fluctuation: number
+  fluctuationPercent: number
+  direction: 'up' | 'down' | 'neutral'
+  isSignificant: boolean
+  affectedAreas: {
+    name: string
+    key: 'love' | 'career' | 'wealth' | 'health'
+    currentScore: number
+    fluctuation: number
+  }[]
+  advice: string
+}

@@ -9,7 +9,10 @@ import type {
   HomeModuleId,
   RecentViewItem,
   HomeLayoutConfig,
-  BehaviorType
+  BehaviorType,
+  SmartReminder,
+  SmartReminderSettings,
+  ReminderSensitivity
 } from '@/types'
 import { zodiacSigns, getSignById } from '@/data/zodiacSigns'
 
@@ -84,6 +87,18 @@ const normalizeLayoutConfig = (raw: any): HomeLayoutConfig => {
   return result
 }
 
+const createDefaultSmartReminderSettings = (): SmartReminderSettings => ({
+  enabled: true,
+  sensitivity: 'medium',
+  fortuneWarning: true,
+  astronomicalEvents: true,
+  wifiOnly: false,
+  dndEnabled: false,
+  dndStart: '22:00',
+  dndEnd: '08:00',
+  pushTime: '08:00'
+})
+
 interface StoredData {
   reminders: CustomReminder[]
   favorites: FavoriteItem[]
@@ -92,6 +107,28 @@ interface StoredData {
   interestTags: InterestTag[]
   layoutConfig: HomeLayoutConfig
   recentViews: RecentViewItem[]
+  smartReminders: SmartReminder[]
+  smartReminderSettings: SmartReminderSettings
+  lastSmartReminderDate: string
+}
+
+const normalizeSmartReminderSettings = (raw: any): SmartReminderSettings => {
+  const defaults = createDefaultSmartReminderSettings()
+  if (!raw || typeof raw !== 'object') return defaults
+  
+  return {
+    enabled: typeof raw.enabled === 'boolean' ? raw.enabled : defaults.enabled,
+    sensitivity: ['high', 'medium', 'low'].includes(raw.sensitivity) 
+      ? raw.sensitivity as ReminderSensitivity 
+      : defaults.sensitivity,
+    fortuneWarning: typeof raw.fortuneWarning === 'boolean' ? raw.fortuneWarning : defaults.fortuneWarning,
+    astronomicalEvents: typeof raw.astronomicalEvents === 'boolean' ? raw.astronomicalEvents : defaults.astronomicalEvents,
+    wifiOnly: typeof raw.wifiOnly === 'boolean' ? raw.wifiOnly : defaults.wifiOnly,
+    dndEnabled: typeof raw.dndEnabled === 'boolean' ? raw.dndEnabled : defaults.dndEnabled,
+    dndStart: typeof raw.dndStart === 'string' ? raw.dndStart : defaults.dndStart,
+    dndEnd: typeof raw.dndEnd === 'string' ? raw.dndEnd : defaults.dndEnd,
+    pushTime: typeof raw.pushTime === 'string' ? raw.pushTime : defaults.pushTime
+  }
 }
 
 const loadFromStorage = (): StoredData => {
@@ -106,7 +143,10 @@ const loadFromStorage = (): StoredData => {
         behaviors: Array.isArray(parsed.behaviors) ? parsed.behaviors : [],
         interestTags: Array.isArray(parsed.interestTags) ? parsed.interestTags : [],
         layoutConfig: normalizeLayoutConfig(parsed.layoutConfig),
-        recentViews: Array.isArray(parsed.recentViews) ? parsed.recentViews : []
+        recentViews: Array.isArray(parsed.recentViews) ? parsed.recentViews : [],
+        smartReminders: Array.isArray(parsed.smartReminders) ? parsed.smartReminders : [],
+        smartReminderSettings: normalizeSmartReminderSettings(parsed.smartReminderSettings),
+        lastSmartReminderDate: typeof parsed.lastSmartReminderDate === 'string' ? parsed.lastSmartReminderDate : ''
       }
     }
   } catch (e) {
@@ -119,7 +159,10 @@ const loadFromStorage = (): StoredData => {
     behaviors: [],
     interestTags: [],
     layoutConfig: createDefaultLayoutConfig(),
-    recentViews: []
+    recentViews: [],
+    smartReminders: [],
+    smartReminderSettings: createDefaultSmartReminderSettings(),
+    lastSmartReminderDate: ''
   }
 }
 
@@ -133,6 +176,9 @@ export const useUserStore = defineStore('user', () => {
   const interestTags = ref<InterestTag[]>(storedData.interestTags)
   const layoutConfig = ref<HomeLayoutConfig>(storedData.layoutConfig)
   const recentViews = ref<RecentViewItem[]>(storedData.recentViews)
+  const smartReminders = ref<SmartReminder[]>(storedData.smartReminders)
+  const smartReminderSettings = ref<SmartReminderSettings>(storedData.smartReminderSettings)
+  const lastSmartReminderDate = ref<string>(storedData.lastSmartReminderDate)
   
   const favoriteFortunes = computed(() => 
     favorites.value.filter(f => f.type === 'fortune')
@@ -178,6 +224,16 @@ export const useUserStore = defineStore('user', () => {
       .sort((a, b) => new Date(b.viewedAt).getTime() - new Date(a.viewedAt).getTime())
       .slice(0, 5)
   )
+
+  const unreadSmartRemindersCount = computed(() => 
+    smartReminders.value.filter(r => !r.read).length
+  )
+
+  const sortedSmartReminders = computed(() => 
+    [...smartReminders.value].sort(
+      (a, b) => new Date(b.triggeredAt).getTime() - new Date(a.triggeredAt).getTime()
+    )
+  )
   
   const isFavorite = (type: FavoriteItem['type'], dataId: string) => {
     return favorites.value.some(f => f.type === type && f.dataId === dataId)
@@ -220,6 +276,50 @@ export const useUserStore = defineStore('user', () => {
     if (index >= 0) {
       reminders.value.splice(index, 1)
     }
+  }
+
+  const addSmartReminder = (reminder: SmartReminder) => {
+    smartReminders.value.unshift(reminder)
+    if (smartReminders.value.length > 100) {
+      smartReminders.value = smartReminders.value.slice(0, 100)
+    }
+  }
+
+  const markSmartReminderAsRead = (id: string) => {
+    const reminder = smartReminders.value.find(r => r.id === id)
+    if (reminder) {
+      reminder.read = true
+    }
+  }
+
+  const markAllSmartRemindersAsRead = () => {
+    smartReminders.value.forEach(r => { r.read = true })
+  }
+
+  const deleteSmartReminder = (id: string) => {
+    const index = smartReminders.value.findIndex(r => r.id === id)
+    if (index >= 0) {
+      smartReminders.value.splice(index, 1)
+    }
+  }
+
+  const clearSmartReminders = () => {
+    smartReminders.value = []
+  }
+
+  const updateSmartReminderSettings = (settings: Partial<SmartReminderSettings>) => {
+    smartReminderSettings.value = {
+      ...smartReminderSettings.value,
+      ...settings
+    }
+  }
+
+  const resetSmartReminderSettings = () => {
+    smartReminderSettings.value = createDefaultSmartReminderSettings()
+  }
+
+  const setLastSmartReminderDate = (date: string) => {
+    lastSmartReminderDate.value = date
   }
   
   const setDefaultSign = (signId: string) => {
@@ -416,7 +516,7 @@ export const useUserStore = defineStore('user', () => {
   
   let saveTimer: number | null = null
   watch(
-    [reminders, favorites, defaultSign, behaviors, interestTags, layoutConfig, recentViews],
+    [reminders, favorites, defaultSign, behaviors, interestTags, layoutConfig, recentViews, smartReminders, smartReminderSettings, lastSmartReminderDate],
     () => {
       if (saveTimer !== null) {
         clearTimeout(saveTimer)
@@ -430,7 +530,10 @@ export const useUserStore = defineStore('user', () => {
             behaviors: behaviors.value,
             interestTags: interestTags.value,
             layoutConfig: deepCloneLayout(layoutConfig.value),
-            recentViews: recentViews.value
+            recentViews: recentViews.value,
+            smartReminders: smartReminders.value,
+            smartReminderSettings: smartReminderSettings.value,
+            lastSmartReminderDate: lastSmartReminderDate.value
           }
           localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
         } catch (e) {
@@ -449,6 +552,9 @@ export const useUserStore = defineStore('user', () => {
     interestTags,
     layoutConfig,
     recentViews,
+    smartReminders,
+    smartReminderSettings,
+    lastSmartReminderDate,
     favoriteFortunes,
     favoriteCompatibilities,
     favoriteKnowledge,
@@ -456,11 +562,21 @@ export const useUserStore = defineStore('user', () => {
     sortedZodiacSigns,
     topInterests,
     recentViewsLimited,
+    unreadSmartRemindersCount,
+    sortedSmartReminders,
     isFavorite,
     toggleFavorite,
     addReminder,
     updateReminder,
     deleteReminder,
+    addSmartReminder,
+    markSmartReminderAsRead,
+    markAllSmartRemindersAsRead,
+    deleteSmartReminder,
+    clearSmartReminders,
+    updateSmartReminderSettings,
+    resetSmartReminderSettings,
+    setLastSmartReminderDate,
     setDefaultSign,
     recordBehavior,
     recordPageView,

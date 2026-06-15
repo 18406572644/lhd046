@@ -48,6 +48,29 @@
             </div>
           </div>
           <div class="sign-info-right">
+            <NBadge :value="userStore.unreadSmartRemindersCount" :max="99" v-if="userStore.unreadSmartRemindersCount > 0">
+              <NButton 
+                @click="router.push('/reminder')"
+                class="reminder-btn"
+                style="margin-right: 12px;"
+              >
+                <template #icon>
+                  <NIcon :component="NotificationsOutline" />
+                </template>
+                提醒
+              </NButton>
+            </NBadge>
+            <NButton 
+              v-else
+              @click="router.push('/reminder')"
+              class="reminder-btn"
+              style="margin-right: 12px;"
+            >
+              <template #icon>
+                <NIcon :component="NotificationsOutline" />
+              </template>
+              提醒
+            </NButton>
             <NButton 
               :type="isFavorited ? 'warning' : 'default'"
               @click="toggleFavorite"
@@ -183,6 +206,80 @@
                 <div class="lucky-label">幸运颜色</div>
                 <div class="lucky-value">{{ dailyFortune.luckyColor }}</div>
               </div>
+            </div>
+          </NCard>
+
+          <NCard v-if="fortuneFluctuation" class="glass-card fortune-card" bordered="false">
+            <div class="fluctuation-header">
+              <div class="section-title" style="margin: 0;">运势波动分析</div>
+              <NButton size="small" type="primary" @click="triggerSmartReminder" ghost>
+                <template #icon>
+                  <NIcon :component="NotificationsOutline" />
+                </template>
+                生成提醒
+              </NButton>
+            </div>
+            <div class="fluctuation-content">
+              <NSpin v-if="fluctuationLoading" size="small" />
+              <template v-else>
+                <div class="fluctuation-stats">
+                  <div class="fluctuation-stat">
+                    <div class="stat-label">今日综合</div>
+                    <div class="stat-value">{{ fortuneFluctuation.currentScore }}分</div>
+                  </div>
+                  <div class="fluctuation-stat">
+                    <div class="stat-label">7天均值</div>
+                    <div class="stat-value">{{ fortuneFluctuation.average7Days }}分</div>
+                  </div>
+                  <div class="fluctuation-stat">
+                    <div class="stat-label">波动方向</div>
+                    <div class="stat-value" :style="{ color: getFluctuationColor(fortuneFluctuation.direction) }">
+                      {{ getFluctuationDirectionText(fortuneFluctuation.direction) }}
+                    </div>
+                  </div>
+                  <div class="fluctuation-stat">
+                    <div class="stat-label">波动值</div>
+                    <div class="stat-value" :style="{ color: getFluctuationColor(fortuneFluctuation.direction) }">
+                      {{ fortuneFluctuation.fluctuation > 0 ? '+' : '' }}{{ fortuneFluctuation.fluctuation }}分
+                    </div>
+                  </div>
+                </div>
+
+                <NTag 
+                  v-if="fortuneFluctuation.isSignificant" 
+                  size="large" 
+                  :type="fortuneFluctuation.direction === 'up' ? 'success' : 'warning'"
+                  style="margin-top: 16px;"
+                  round
+                >
+                  {{ fortuneFluctuation.direction === 'up' ? '⚠️ 运势明显上升，把握机会' : '⚠️ 运势明显下降，谨慎行事' }}
+                </NTag>
+
+                <div v-if="fortuneFluctuation.affectedAreas.length > 0" class="affected-areas">
+                  <div class="affected-areas-title">受影响领域：</div>
+                  <div class="affected-areas-list">
+                    <div 
+                      v-for="area in fortuneFluctuation.affectedAreas" 
+                      :key="area.key" 
+                      class="affected-area-item"
+                    >
+                      <span class="area-name">{{ area.name }}</span>
+                      <span 
+                        class="area-fluctuation"
+                        :style="{ color: area.fluctuation > 0 ? '#10b981' : area.fluctuation < 0 ? '#f97316' : '#c9b6e4' }"
+                      >
+                        {{ area.fluctuation > 0 ? '+' : '' }}{{ area.fluctuation }}分
+                      </span>
+                      <span class="area-score">当前 {{ area.currentScore }}分</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="fluctuation-advice">
+                  <div class="advice-icon">💡</div>
+                  <div class="advice-text">{{ fortuneFluctuation.advice }}</div>
+                </div>
+              </template>
             </div>
           </NCard>
         </template>
@@ -321,21 +418,23 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { 
-  NCard, NTabs, NTabPane, NTag, NProgress, NIcon, NButton, NSpin 
+  NCard, NTabs, NTabPane, NTag, NProgress, NIcon, NButton, NSpin, NBadge, useMessage
 } from 'naive-ui'
-import { ArrowBackOutline, StarOutline, Star } from '@vicons/ionicons5'
+import { ArrowBackOutline, StarOutline, Star, NotificationsOutline } from '@vicons/ionicons5'
 import { useUserStore } from '@/stores/userStore'
 import { 
-  getDailyFortune, getWeeklyFortune, getMonthlyFortune 
+  getDailyFortune, getWeeklyFortune, getMonthlyFortune,
+  analyzeFortuneFluctuation, generateSmartReminder
 } from '@/data/mockApi'
 import { zodiacSigns, getSignById } from '@/data/zodiacSigns'
 import type { 
-  DailyFortune, WeeklyFortune, MonthlyFortune, ZodiacSign 
+  DailyFortune, WeeklyFortune, MonthlyFortune, ZodiacSign, FortuneFluctuation 
 } from '@/types'
 
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
+const message = useMessage()
 
 const loading = ref(true)
 const activeTab = ref<'daily' | 'weekly' | 'monthly'>('daily')
@@ -343,6 +442,8 @@ const currentSignId = ref(route.query.sign as string || userStore.defaultSign)
 const dailyFortune = ref<DailyFortune | null>(null)
 const weeklyFortune = ref<WeeklyFortune | null>(null)
 const monthlyFortune = ref<MonthlyFortune | null>(null)
+const fortuneFluctuation = ref<FortuneFluctuation | null>(null)
+const fluctuationLoading = ref(false)
 
 const currentSign = computed<ZodiacSign | undefined>(() => {
   return getSignById(currentSignId.value)
@@ -426,6 +527,58 @@ const toggleFavorite = () => {
   }
 }
 
+const loadFortuneFluctuation = async () => {
+  if (activeTab.value !== 'daily') return
+  fluctuationLoading.value = true
+  try {
+    fortuneFluctuation.value = await analyzeFortuneFluctuation(
+      currentSignId.value,
+      new Date(),
+      userStore.smartReminderSettings.sensitivity
+    )
+  } catch (error) {
+    console.error('Failed to load fortune fluctuation:', error)
+  } finally {
+    fluctuationLoading.value = false
+  }
+}
+
+const triggerSmartReminder = async () => {
+  try {
+    const reminder = await generateSmartReminder(
+      currentSignId.value,
+      userStore.smartReminderSettings.sensitivity
+    )
+    if (reminder) {
+      userStore.addSmartReminder(reminder)
+      message.success('已生成智能提醒')
+    } else {
+      message.info('当前运势平稳，暂无需要提醒的变化')
+    }
+  } catch (error) {
+    console.error('Failed to generate smart reminder:', error)
+    message.error('生成提醒失败，请重试')
+  }
+}
+
+const getFluctuationDirectionText = (direction: string) => {
+  const map: Record<string, string> = {
+    up: '📈 上升',
+    down: '📉 下降',
+    neutral: '➖ 平稳'
+  }
+  return map[direction] || direction
+}
+
+const getFluctuationColor = (direction: string) => {
+  const map: Record<string, string> = {
+    up: '#10b981',
+    down: '#f97316',
+    neutral: '#c9b6e4'
+  }
+  return map[direction] || '#c9b6e4'
+}
+
 const loadData = async () => {
   loading.value = true
   try {
@@ -433,6 +586,7 @@ const loadData = async () => {
     
     if (activeTab.value === 'daily') {
       dailyFortune.value = await getDailyFortune(currentSignId.value, today)
+      await loadFortuneFluctuation()
     } else if (activeTab.value === 'weekly') {
       weeklyFortune.value = await getWeeklyFortune(currentSignId.value, today)
     } else if (activeTab.value === 'monthly') {
@@ -825,9 +979,127 @@ onMounted(() => {
   line-height: 1.6;
 }
 
+.fluctuation-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.fluctuation-content {
+  position: relative;
+  min-height: 100px;
+}
+
+.fluctuation-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.fluctuation-stat {
+  text-align: center;
+  padding: 16px 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: var(--pale-lavender);
+  margin-bottom: 8px;
+}
+
+.stat-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--star-white);
+}
+
+.affected-areas {
+  margin-top: 20px;
+}
+
+.affected-areas-title {
+  font-size: 14px;
+  color: var(--pale-lavender);
+  margin-bottom: 12px;
+}
+
+.affected-areas-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.affected-area-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+}
+
+.area-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--star-white);
+  min-width: 50px;
+}
+
+.area-fluctuation {
+  font-size: 14px;
+  font-weight: 700;
+  min-width: 60px;
+}
+
+.area-score {
+  font-size: 12px;
+  color: var(--pale-lavender);
+  margin-left: auto;
+}
+
+.fluctuation-advice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 20px;
+  padding: 16px;
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(0, 212, 255, 0.05));
+  border-left: 3px solid var(--neon-purple);
+  border-radius: 8px;
+}
+
+.advice-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.advice-text {
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--star-white);
+}
+
+.reminder-btn {
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+
 @media (max-width: 768px) {
   .fortune-container {
     padding: 12px;
+  }
+
+  .fluctuation-stats {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .sign-info-right {
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
   }
 
   .sign-header {

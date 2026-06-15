@@ -9,9 +9,13 @@ import type {
   TrendData,
   TrendDataPoint,
   RadarData,
-  ZodiacRanking
+  ZodiacRanking,
+  AstronomicalEvent, 
+  FortuneFluctuation,
+  SmartReminder,
+  ReminderSensitivity
 } from '@/types'
-import { zodiacSigns } from './zodiacSigns'
+import { zodiacSigns, getSignById } from './zodiacSigns'
 import { format, startOfWeek, endOfWeek } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 
@@ -708,4 +712,236 @@ export const getZodiacRanking = async (date: Date): Promise<ZodiacRanking> => {
     date: format(date, 'yyyy-MM-dd'),
     rankings
   }
+}
+
+const sensitivityThresholds: Record<ReminderSensitivity, number> = {
+  high: 5,
+  medium: 10,
+  low: 15
+}
+
+const astronomicalEventsData: AstronomicalEvent[] = [
+  {
+    id: 'event-1',
+    type: 'mercury_retrograde',
+    name: '水星逆行',
+    description: '水星进入逆行期，可能影响沟通、出行、电子设备等方面。',
+    startDate: format(new Date(), 'yyyy-MM-dd'),
+    endDate: format(new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
+    icon: '☿️',
+    impactLevel: 'high',
+    advice: '重要文件请备份，出行提前规划，沟通多加确认，避免冲动决策。'
+  },
+  {
+    id: 'event-2',
+    type: 'full_moon',
+    name: '满月',
+    description: '满月期间情绪容易波动，能量达到峰值。',
+    startDate: format(new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
+    endDate: format(new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
+    icon: '🌕',
+    impactLevel: 'medium',
+    advice: '注意情绪管理，避免重要决策，适合冥想和释放负能量。'
+  },
+  {
+    id: 'event-3',
+    type: 'new_moon',
+    name: '新月',
+    description: '新月是新的开始，适合设定目标和规划未来。',
+    startDate: format(new Date(Date.now() + 19 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
+    endDate: format(new Date(Date.now() + 19 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
+    icon: '🌑',
+    impactLevel: 'low',
+    advice: '适合立下新目标，开启新项目，是许愿和规划的好时机。'
+  },
+  {
+    id: 'event-4',
+    type: 'mars_retrograde',
+    name: '火星逆行',
+    description: '火星逆行期间，行动力受阻，容易冲动或拖延。',
+    startDate: format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
+    endDate: format(new Date(Date.now() + 70 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
+    icon: '♂️',
+    impactLevel: 'high',
+    advice: '避免开始新项目，不要冲动行事，多些耐心，注意身体健康。'
+  },
+  {
+    id: 'event-5',
+    type: 'venus_retrograde',
+    name: '金星逆行',
+    description: '金星逆行影响感情、金钱和审美相关事务。',
+    startDate: format(new Date(Date.now() + 90 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
+    endDate: format(new Date(Date.now() + 130 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
+    icon: '♀️',
+    impactLevel: 'medium',
+    advice: '避免重大财务决策，感情中多沟通，不要冲动购买贵重物品。'
+  },
+  {
+    id: 'event-6',
+    type: 'solar_eclipse',
+    name: '日食',
+    description: '日食是强大的能量转折点，带来新的机遇和变化。',
+    startDate: format(new Date(Date.now() + 60 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
+    endDate: format(new Date(Date.now() + 60 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
+    icon: '🌑',
+    impactLevel: 'high',
+    advice: '拥抱变化，把握机遇，适合做出重要决定和改变。'
+  }
+]
+
+export const getAstronomicalEvents = async (): Promise<AstronomicalEvent[]> => {
+  await delay(300)
+  return [...astronomicalEventsData]
+}
+
+export const getActiveAstronomicalEvents = async (date: Date): Promise<AstronomicalEvent[]> => {
+  await delay(200)
+  const dateStr = format(date, 'yyyy-MM-dd')
+  return astronomicalEventsData.filter(
+    event => event.startDate <= dateStr && event.endDate >= dateStr
+  )
+}
+
+export const getUpcomingAstronomicalEvents = async (days: number = 30): Promise<AstronomicalEvent[]> => {
+  await delay(200)
+  const today = new Date()
+  const future = new Date(Date.now() + days * 24 * 60 * 60 * 1000)
+  const todayStr = format(today, 'yyyy-MM-dd')
+  const futureStr = format(future, 'yyyy-MM-dd')
+  return astronomicalEventsData.filter(
+    event => event.startDate >= todayStr && event.startDate <= futureStr
+  )
+}
+
+export const generate7DayFortunes = async (signId: string, endDate: Date): Promise<DailyFortune[]> => {
+  const fortunes: DailyFortune[] = []
+  for (let i = 6; i >= 0; i--) {
+    const date = new Date(endDate)
+    date.setDate(date.getDate() - i)
+    const fortune = await getDailyFortune(signId, date)
+    fortunes.push(fortune)
+  }
+  return fortunes
+}
+
+export const analyzeFortuneFluctuation = async (
+  signId: string,
+  currentDate: Date,
+  sensitivity: ReminderSensitivity = 'medium'
+): Promise<FortuneFluctuation> => {
+  await delay(400)
+  
+  const fortunes = await generate7DayFortunes(signId, currentDate)
+  const currentFortune = fortunes[fortunes.length - 1]
+  const previousFortunes = fortunes.slice(0, 6)
+  
+  const average7Days = Math.round(
+    previousFortunes.reduce((sum, f) => sum + f.overallScore, 0) / previousFortunes.length
+  )
+  
+  const fluctuation = currentFortune.overallScore - average7Days
+  const fluctuationPercent = Math.round((fluctuation / average7Days) * 100)
+  const threshold = sensitivityThresholds[sensitivity]
+  
+  let direction: 'up' | 'down' | 'neutral' = 'neutral'
+  if (fluctuation >= threshold) direction = 'up'
+  else if (fluctuation <= -threshold) direction = 'down'
+  
+  const isSignificant = direction !== 'neutral'
+  
+  const areaMap = [
+    { key: 'love' as const, name: '爱情', score: currentFortune.loveScore, prevScore: previousFortunes.reduce((s, f) => s + f.loveScore, 0) / 6 },
+    { key: 'career' as const, name: '事业', score: currentFortune.careerScore, prevScore: previousFortunes.reduce((s, f) => s + f.careerScore, 0) / 6 },
+    { key: 'wealth' as const, name: '财运', score: currentFortune.wealthScore, prevScore: previousFortunes.reduce((s, f) => s + f.wealthScore, 0) / 6 },
+    { key: 'health' as const, name: '健康', score: currentFortune.healthScore, prevScore: previousFortunes.reduce((s, f) => s + f.healthScore, 0) / 6 }
+  ]
+  
+  const affectedAreas = areaMap
+    .map(a => ({
+      name: a.name,
+      key: a.key,
+      currentScore: a.score,
+      fluctuation: Math.round(a.score - a.prevScore)
+    }))
+    .filter(a => Math.abs(a.fluctuation) >= threshold)
+    .sort((a, b) => Math.abs(b.fluctuation) - Math.abs(a.fluctuation))
+  
+  let advice = ''
+  if (direction === 'up') {
+    advice = `运势上升明显，建议把握机会，在${affectedAreas.map(a => a.name).join('、') || '各领域'}方面积极行动，有望取得突破。保持积极心态，顺势而为。`
+  } else if (direction === 'down') {
+    advice = `运势有所下滑，建议在${affectedAreas.map(a => a.name).join('、') || '各方面'}谨慎行事，避免重大决策。调整心态，多做准备，等待时机好转。`
+  } else {
+    advice = '运势平稳，维持日常节奏即可。可以关注细节，积累能量，为未来做好准备。'
+  }
+  
+  return {
+    signId,
+    date: format(currentDate, 'yyyy-MM-dd'),
+    currentScore: currentFortune.overallScore,
+    average7Days,
+    fluctuation,
+    fluctuationPercent,
+    direction,
+    isSignificant,
+    affectedAreas,
+    advice
+  }
+}
+
+export const generateSmartReminder = async (
+  signId: string,
+  sensitivity: ReminderSensitivity = 'medium'
+): Promise<SmartReminder | null> => {
+  await delay(500)
+  
+  const today = new Date()
+  const sign = getSignById(signId)
+  if (!sign) return null
+  
+  const activeEvents = await getActiveAstronomicalEvents(today)
+  
+  if (activeEvents.length > 0) {
+    const event = activeEvents[0]
+    return {
+      id: `smart-${Date.now()}`,
+      type: 'astronomical_event',
+      signId,
+      title: `${sign.symbol} ${event.name}提醒`,
+      content: `${event.name}期间：${event.description}`,
+      direction: 'neutral',
+      affectedAreas: ['沟通', '决策', '情绪'],
+      advice: event.advice,
+      astronomicalEvent: event,
+      triggeredAt: new Date().toISOString(),
+      read: false,
+      sensitivity
+    }
+  }
+  
+  const fluctuation = await analyzeFortuneFluctuation(signId, today, sensitivity)
+  
+  if (fluctuation.isSignificant) {
+    const directionText = fluctuation.direction === 'up' ? '上升' : '下降'
+    const icon = fluctuation.direction === 'up' ? '📈' : '📉'
+    
+    return {
+      id: `smart-${Date.now()}`,
+      type: 'fortune_warning',
+      signId,
+      title: `${sign.symbol} ${sign.name}运势${directionText}预警 ${icon}`,
+      content: `今日运势${directionText}${Math.abs(fluctuation.fluctuation)}分，与近7天均值${fluctuation.average7Days}分相比${directionText}明显。`,
+      direction: fluctuation.direction,
+      affectedAreas: fluctuation.affectedAreas.map(a => a.name),
+      advice: fluctuation.advice,
+      scoreChange: fluctuation.fluctuation,
+      currentScore: fluctuation.currentScore,
+      averageScore: fluctuation.average7Days,
+      triggeredAt: new Date().toISOString(),
+      read: false,
+      sensitivity
+    }
+  }
+  
+  return null
 }
